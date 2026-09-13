@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pixel Pet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: #050810;
+    font-family: 'Press Start 2P', monospace;
+  }
+  a, a:hover { color: #8E94F2; }
+
+  .stage {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    background: radial-gradient(circle at 50% 42%, rgba(89,175,177,0.14), rgba(5,8,16,0) 62%), #050810;
+  }
+
+  .shell {
+    position: relative;
+    width: 374px;
+    padding: 64px 34px 34px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    border-radius: 50% 50% 47% 47% / 57% 57% 43% 43%;
+    background: #8E94F2;
+    border: 6px solid #3B3F8C;
+  }
+
+  .keyring {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 34px;
+    height: 20px;
+    border: 5px solid #6B71D6;
+    border-radius: 12px 12px 4px 4px;
+    background: transparent;
+  }
+
+  .wordmark {
+    color: #3B3F8C;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.28);
+  }
+
+  .bezel {
+    position: relative;
+    padding: 4px;
+    border-radius: 8px;
+    background: #0d0f18;
+    border: 3px solid #3B3F8C;
+  }
+
+  .lcd {
+    position: relative;
+    border-radius: 5px;
+    overflow: hidden;
+  }
+
+  canvas {
+    display: block;
+    width: 252px;
+    height: 210px;
+    image-rendering: pixelated;
+    background: #050810;
+  }
+
+  .msg {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    pointer-events: none;
+    background: rgba(5,8,16,0.74);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .msg.show { opacity: 1; }
+  .msg-text {
+    color: #59AFB1;
+    font-size: 15px;
+    line-height: 1.9;
+    letter-spacing: 2px;
+    text-align: center;
+    text-shadow: 0 0 8px rgba(89,175,177,0.4);
+  }
+  .msg-rule { width: 118px; height: 3px; background: #BF5E95; }
+
+  .scanlines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,0.16) 0px, rgba(0,0,0,0.16) 1px, rgba(0,0,0,0) 2px, rgba(0,0,0,0) 4px);
+  }
+  .glare {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(115deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 40%);
+  }
+
+  .hint {
+    color: #3B3F8C;
+    font-size: 7px;
+    letter-spacing: 1px;
+    opacity: 0.85;
+    white-space: nowrap;
+  }
+
+  .controls { display: flex; gap: 26px; align-items: flex-start; }
+  .control { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+  /* labels removed visually but kept in the layout so the shell height stays identical */
+  .control span { font-size: 6px; letter-spacing: 1px; visibility: hidden; }
+
+  button {
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-family: 'Press Start 2P', monospace;
+  }
+  .btn-look {
+    width: 52px;
+    height: 52px;
+    border: 3px solid #3B3F8C;
+    background: #5A60C6;
+    box-shadow: 0 4px 0 #3B3F8C;
+    color: #eef;
+    font-size: 13px;
+  }
+  .btn-look:active {
+    transform: translateY(4px);
+    box-shadow: 0 0 0 #3B3F8C;
+  }
+  .btn-pet {
+    width: 56px;
+    height: 56px;
+    border: 3px solid #7C3A5F;
+    background: #BF5E95;
+    box-shadow: 0 4px 0 #7C3A5F;
+    color: #fff;
+    font-size: 9px;
+  }
+  .btn-pet:active {
+    transform: translateY(4px);
+    box-shadow: 0 0 0 #7C3A5F;
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="shell">
+    <div class="keyring"></div>
+    <div class="wordmark">PIXL&middot;PET</div>
+
+    <div class="bezel">
+      <div class="lcd">
+        <canvas id="screen" width="252" height="210"></canvas>
+        <div class="msg" id="msg">
+          <div class="msg-text">THX FOR<br>VISITING!</div>
+          <div class="msg-rule"></div>
+        </div>
+        <div class="scanlines"></div>
+        <div class="glare"></div>
+      </div>
+    </div>
+
+    <div class="hint">tap PET to say hi</div>
+
+    <div class="controls">
+      <div class="control">
+        <button class="btn-look" id="btn-left" aria-label="Look left">&lt;</button>
+        <span>LOOK</span>
+      </div>
+      <div class="control pet">
+        <button class="btn-pet" id="btn-pet">PET</button>
+        <span>&#9829;</span>
+      </div>
+      <div class="control">
+        <button class="btn-look" id="btn-right" aria-label="Look right">&gt;</button>
+        <span>LOOK</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // palette
+  const C = { bg:'#050810', teal:'#59AFB1', tlight:'#7FD0D2', tdark:'#3E8385', peri:'#8E94F2', peribright:'#B9BEFF', heart:'#BF5E95' };
+
+  // sprite geometry
+  const ART = 9, OX = 63, OY = 64, CW = 252, CH = 210;
+
+  const BODY = [
+    "      AA      ",
+    "      BB      ",
+    "   HHHHHHHH   ",
+    "  HHHHHHHHHH  ",
+    " BBBBBBBBBBBB ",
+    " BBBBBBBBBBBB ",
+    " BBBBBBBBBBBB ",
+    " BBBBBBBBBBBB ",
+    " BBBBBBBBBBBB ",
+    " DDDDDDDDDDDD ",
+    "  DDDDDDDDDD  ",
+    "   DDDDDDDD   ",
+    "   DD    DD   ",
+  ];
+  const HEART = [
+    " ## ## ",
+    "#######",
+    "#######",
+    " ##### ",
+    "  ###  ",
+    "   #   ",
+  ];
+
+  const cv = document.getElementById('screen');
+  const msgEl = document.getElementById('msg');
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = CW * dpr;
+  cv.height = CH * dpr;
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+
+  const now = performance.now();
+  let blinkUntil = 0, nextBlink = now + 1400;
+  let micro = null, microUntil = 0, microDir = 1, nextMicro = now + 3800;
+  let hopStart = null;
+  let hearts = [];
+  let msgTimer;
+
+  document.getElementById('btn-pet').addEventListener('click', () => {
+    const t = performance.now();
+    if (hopStart == null) {
+      hopStart = t;
+      hearts.push({ born: t, x: OX + 3.5 * ART });
+    }
+    msgEl.classList.add('show');
+    clearTimeout(msgTimer);
+    msgTimer = setTimeout(() => msgEl.classList.remove('show'), 2600);
+  });
+  const look = (dir) => () => { micro = 'look'; microDir = dir; microUntil = performance.now() + 850; };
+  document.getElementById('btn-left').addEventListener('click', look(-1));
+  document.getElementById('btn-right').addEventListener('click', look(1));
+
+  function px(x, y, w, h, color, a) {
+    ctx.globalAlpha = a == null ? 1 : a;
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, w, h);
+    ctx.globalAlpha = 1;
+  }
+  // a body cell (grid coords) offset by oyPx
+  function cell(gx, gy, oyPx, color) {
+    px(OX + gx * ART, oyPx + gy * ART, ART, ART, color);
+  }
+
+  function loop(t) {
+    // schedule ambient events
+    if (t > nextBlink) { blinkUntil = t + 130; nextBlink = t + 2200 + Math.random() * 2400; }
+    if (t > nextMicro && hopStart == null && t > microUntil) {
+      if (Math.random() < 0.35) { micro = 'tap'; microUntil = t + 780; }
+      else { micro = 'look'; microDir = Math.random() < 0.5 ? -1 : 1; microUntil = t + 950; }
+      nextMicro = t + 4600 + Math.random() * 4200;
+    }
+
+    // hop
+    let hopPx = 0, happy = false, mouthOpen = false;
+    if (hopStart != null) {
+      const p = (t - hopStart) / 560;
+      if (p >= 1) { hopStart = null; }
+      else { hopPx = -Math.sin(p * Math.PI) * 34; happy = true; mouthOpen = true; }
+    }
+
+    // breathing bob (px)
+    const breath = Math.sin(t / 1100);
+    const oyPx = OY + Math.round(breath * 2) + hopPx;
+
+    const active = t < microUntil ? micro : null;
+    const blink = t < blinkUntil;
+    const lookDir = active === 'look' ? microDir : 0;
+    const tap = active === 'tap';
+
+    // ---- draw ----
+    ctx.clearRect(0, 0, CW, CH);
+    px(0, 0, CW, CH, C.bg);
+
+    // status icons (top row)
+    for (let i = 0; i < 6; i++) px(46 + i * 30, 12, ART - 3, ART - 3, C.tdark, 0.55);
+
+    // ground shadow (static)
+    px(OX + 2 * ART, OY + 12 * ART + 4, 10 * ART, 5, C.tdark, 0.22);
+
+    // body sprite
+    const bulb = breath > 0 ? C.peribright : C.peri;
+    for (let r = 0; r < BODY.length; r++) {
+      const row = BODY[r];
+      for (let ci = 0; ci < row.length; ci++) {
+        const ch = row[ci];
+        if (ch === ' ') continue;
+        const col = ch === 'A' ? bulb : ch === 'H' ? C.tlight : ch === 'D' ? C.tdark : C.teal;
+        cell(ci, r, oyPx, col);
+      }
+    }
+
+    // eyes (holes = bg) — anchor rows: left cols 3-4, right cols 9-10, top row 5
+    const drawEye = (baseCol) => {
+      if (happy) {
+        cell(baseCol, 6, oyPx, C.bg);
+        cell(baseCol + 1, 5, oyPx, C.bg);
+        cell(baseCol + 2, 6, oyPx, C.bg);
+      } else if (blink) {
+        cell(baseCol, 6, oyPx, C.bg);
+        cell(baseCol + 1, 6, oyPx, C.bg);
+      } else {
+        cell(baseCol + lookDir, 5, oyPx, C.bg);
+        cell(baseCol + 1 + lookDir, 5, oyPx, C.bg);
+        cell(baseCol + lookDir, 6, oyPx, C.bg);
+        cell(baseCol + 1 + lookDir, 6, oyPx, C.bg);
+      }
+    };
+    drawEye(3);
+    drawEye(9);
+
+    // mouth
+    cell(6, 8, oyPx, C.bg); cell(7, 8, oyPx, C.bg);
+    if (mouthOpen) { cell(6, 9, oyPx, C.bg); cell(7, 9, oyPx, C.bg); }
+
+    // tap: little periwinkle hand poking the right screen wall
+    if (tap) {
+      cell(13, 6, oyPx, C.peri);
+      cell(14, 6, oyPx, C.peribright);
+    }
+
+    // hearts
+    hearts = hearts.filter(h => t - h.born < 1250);
+    for (const h of hearts) {
+      const p = (t - h.born) / 1250;
+      const hy = (OY - 6) + hopPx * 0.3 - p * 66;
+      const a = p < 0.15 ? p / 0.15 : 1 - (p - 0.15) / 0.85;
+      for (let r = 0; r < HEART.length; r++) {
+        const row = HEART[r];
+        for (let ci = 0; ci < row.length; ci++) {
+          if (row[ci] === ' ') continue;
+          px(h.x + ci * ART, hy + r * ART, ART, ART, C.heart, Math.max(0, a));
+        }
+      }
+    }
+
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

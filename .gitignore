@@ -1,0 +1,13 @@
+# macOS / Windows cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+
+# Node (in case future tooling lands)
+node_modules/
+npm-debug.log*
