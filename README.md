@@ -13,7 +13,7 @@ A tiny retro Tamagotchi-style desk companion. Peri is drawn pixel-by-pixel on a 
 Peri lives in two forms — this repo has both, and they evolve together.
 
 - **`index.html`** — the standalone toy. One file. No build step, no dependencies, no framework. Vanilla JS + a `<canvas>` sprite grid, three buttons (`<`, `PET`, `>`), and that's the whole surface. Open it in a browser and she's there. This is what the live demo above serves.
-- **`PixelPet.framer.tsx`** — the fuller "cyberdeck" version, a Framer code component. Peri is wired by a thin teal cable to a small terminal that logs what I'm up to; `PET` and `LOOK` play sounds via [cuelume](https://github.com/Danilaa1/cuelume). Drop this into a Framer project as a code component.
+- **`PixelPet.framer.tsx`** — the fuller "cyberdeck" version, a Framer code component. Peri is wired by a thin teal cable to a small terminal that logs what I'm up to; `PET` and `LOOK` play sounds via [cuelume](https://github.com/Danilaa1/cuelume).
 
 Future updates land on both.
 
@@ -41,4 +41,4 @@ The Framer component is used inside Framer — paste `PixelPet.framer.tsx` into 
 
 ## License
 
-[MIT](LICENSE) — do whatever, a link back is nice.
+[MIT](LICENSE)
