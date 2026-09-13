@@ -6,8 +6,6 @@ A tiny retro Tamagotchi-style desk companion. Peri is drawn pixel-by-pixel on a 
 
 **[▶ Live demo](https://gridalchemy.github.io/peri/)**
 
-![peri](docs/peri.png)
-
 ## What's in here
 
 Peri lives in two forms — this repo has both, and they evolve together.
