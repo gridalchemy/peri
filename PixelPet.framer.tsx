@@ -399,8 +399,8 @@ const CSS = `
 .pd-deck.pd-stacked .pd-terminal { width: 320px; }
 
 .pd-bio {
-    margin-top: 18px; text-align: center;
-    font-family: ${MONO}; font-size: 11px; letter-spacing: 0.3px;
+    margin-top: 34px; text-align: center;
+    font-family: ${MONO}; font-size: 12px; letter-spacing: 0.3px;
     color: #8b88a0;
 }
 `

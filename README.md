@@ -4,6 +4,8 @@
 
 A tiny retro Tamagotchi-style desk companion. Peri is drawn pixel-by-pixel on a `<canvas>`; she breathes, blinks, looks around, and reacts when you pet her.
 
+Peri is short for **periwinkle**, one of my brand colors and the inspiration for her. It's the soft blue-violet of her shell.
+
 **[▶ Live demo](https://gridalchemy.github.io/peri/)**
 
 ## What's in here
