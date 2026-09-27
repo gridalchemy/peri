@@ -199,8 +199,8 @@ const CSS = `
 /* molded shell. --pd-shell / --pd-outline come from the property controls;
    the plain background is the fallback where color-mix() isn't supported */
 .pd-shell {
-    position: relative; width: 374px; height: 470px;
-    padding: 46px 34px 30px;
+    position: relative; width: 374px; height: 452px;
+    padding: 44px 34px 30px;
     display: flex; flex-direction: column; align-items: center; gap: 18px;
     border-radius: 50% 50% 47% 47% / 57% 57% 43% 43%;
     border: 1px solid var(--pd-outline);
@@ -324,7 +324,7 @@ const CSS = `
 }
 
 /* bottom row: speaker slots + version plate */
-.pd-base { display: flex; align-items: center; gap: 26px; margin-top: 12px; }
+.pd-base { display: flex; align-items: center; gap: 26px; margin-top: 0; }
 .pd-grille { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
 .pd-grille > i {
     display: block; height: 4px; border-radius: 2px; background: #3A3E86;
