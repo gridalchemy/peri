@@ -21,60 +21,114 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 32px;
+    padding: 56px 32px 48px;
     background: radial-gradient(circle at 50% 42%, rgba(89,175,177,0.14), rgba(5,8,16,0) 62%), #050810;
+  }
+
+  /* wrapper: holds the keyring behind the shell and the floor shadow */
+  .device {
+    position: relative;
+    isolation: isolate;
+    width: 374px;
+  }
+  .device::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    left: 10%;
+    right: 10%;
+    bottom: -30px;
+    height: 30px;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0.75), rgba(0,0,0,0) 70%);
+    filter: blur(2px);
+  }
+
+  /* molded loop — sits behind the shell, only its top arc shows */
+  .keyring {
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 52px;
+    height: 56px;
+    border: 8px solid #A8538A;
+    border-radius: 50% 50% 40% 40%;
+    box-shadow:
+      inset 2px 2px 0 rgba(255,255,255,0.22),
+      inset -2px -1px 0 rgba(0,0,0,0.25),
+      0 2px 0 #6E3354;
   }
 
   .shell {
     position: relative;
     width: 374px;
-    padding: 64px 34px 34px;
+    height: 470px;
+    padding: 46px 34px 30px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
+    gap: 18px;
     border-radius: 50% 50% 47% 47% / 57% 57% 43% 43%;
-    background: #8E94F2;
-    border: 4px solid #3B3F8C;
+    border: 1px solid rgba(59,63,140,0.6);
+    background:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.23  0 0 0 0 0.25  0 0 0 0 0.55  0 0 0 0.16 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+      radial-gradient(120% 85% at 30% 16%, #A9AEFB 0%, #8E94F2 46%, #7B81E2 100%);
+    box-shadow:
+      /* bevel on the face */
+      inset 0 2px 1px rgba(255,255,255,0.5),
+      inset 5px 6px 14px rgba(255,255,255,0.16),
+      inset -6px -10px 20px rgba(59,63,140,0.38),
+      /* ambient */
+      0 26px 40px rgba(0,0,0,0.55);
   }
 
-  .keyring {
-    position: absolute;
-    top: 14px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 34px;
-    height: 20px;
-    border: 4px solid #6B71D6;
-    border-radius: 12px 12px 4px 4px;
-    background: transparent;
-  }
-
+  /* debossed nameplate */
   .wordmark {
     color: #3B3F8C;
-    font-size: 12px;
-    letter-spacing: 2px;
-    text-shadow: 0 1px 0 rgba(255,255,255,0.28);
+    font-size: 13px;
+    letter-spacing: 4px;
+    margin-right: -4px;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.4), 0 -1px 0 rgba(40,43,110,0.35);
   }
-
+  /* screen surround: recessed dark panel with grip ridges */
+  .bezel-wrap { position: relative; }
   .bezel {
     position: relative;
-    padding: 4px;
-    border-radius: 8px;
-    background: #0d0f18;
-    border: 3px solid #3B3F8C;
+    padding: 10px 16px 14px;
+    border-radius: 12px 12px 20px 20px;
+    background: linear-gradient(180deg, #2C2F58 0%, #1F2245 55%, #1A1C3A 100%);
+    box-shadow:
+      0 -1px 0 rgba(40,43,110,0.55),
+      0 2px 0 rgba(255,255,255,0.38),
+      inset 0 3px 5px rgba(0,0,0,0.5),
+      inset 0 -1px 0 rgba(255,255,255,0.07);
   }
+  .bezel::before, .bezel::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 7px;
+    height: 24px;
+    background: repeating-linear-gradient(180deg,
+      rgba(255,255,255,0.10) 0 1px,
+      rgba(0,0,0,0.45) 1px 3px,
+      rgba(0,0,0,0) 3px 7px);
+  }
+  .bezel::before { left: 5px; }
+  .bezel::after { right: 5px; }
 
   .lcd {
     position: relative;
-    border-radius: 5px;
+    border-radius: 4px;
     overflow: hidden;
+    box-shadow: 0 0 0 2px #0A0C18, 0 1px 0 2px rgba(255,255,255,0.08);
   }
 
   canvas {
     display: block;
-    width: 222px;
-    height: 180px;
+    width: 198px;
+    height: 160px;
     image-rendering: pixelated;
     background: #050810;
   }
@@ -95,13 +149,13 @@
   .msg.show { opacity: 1; }
   .msg-text {
     color: #59AFB1;
-    font-size: 15px;
+    font-size: 13px;
     line-height: 1.9;
     letter-spacing: 2px;
     text-align: center;
     text-shadow: 0 0 8px rgba(89,175,177,0.4);
   }
-  .msg-rule { width: 118px; height: 3px; background: #BF5E95; }
+  .msg-rule { width: 104px; height: 3px; background: #BF5E95; }
 
   .scanlines {
     position: absolute;
@@ -109,92 +163,186 @@
     pointer-events: none;
     background: repeating-linear-gradient(0deg, rgba(0,0,0,0.10) 0px, rgba(0,0,0,0.10) 1px, rgba(0,0,0,0) 2px, rgba(0,0,0,0) 5px);
   }
+  /* screen sits below the glass: dark falloff at the edges */
+  .shade {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    box-shadow: inset 0 0 16px rgba(0,0,0,0.85), inset 0 4px 6px rgba(0,0,0,0.55);
+  }
   .glare {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: linear-gradient(115deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 40%);
+    background: linear-gradient(118deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.03) 34%, rgba(255,255,255,0) 34.5%);
   }
 
   .hint {
-    color: #3B3F8C;
+    color: rgba(59,63,140,0.9);
     font-size: 8px;
     letter-spacing: 1px;
-    opacity: 0.85;
     white-space: nowrap;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.35);
   }
 
   .controls { display: flex; gap: 26px; align-items: flex-start; }
-  .control { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+  .control { position: relative; display: flex; flex-direction: column; align-items: center; gap: 7px; }
   /* labels removed visually but kept in the layout so the shell height stays identical */
   .control span { font-size: 6px; letter-spacing: 1px; visibility: hidden; }
 
+  /* recessed well each button sits in */
+  .control::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 64px;
+    height: 66px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #6A70D2, #9298F3);
+    box-shadow: inset 0 3px 4px rgba(40,43,110,0.55), 0 1px 0 rgba(255,255,255,0.45);
+  }
+  .control.pet::before { width: 68px; height: 70px; }
+
   button {
+    position: relative;
+    z-index: 1;
     border: none;
     border-radius: 50%;
     cursor: pointer;
     font-family: 'Press Start 2P', monospace;
+    transition: transform 0.06s ease, box-shadow 0.06s ease;
   }
   .btn-look {
     width: 52px;
     height: 52px;
-    border: 3px solid #3B3F8C;
-    background: #5A60C6;
-    box-shadow: 0 4px 0 #3B3F8C;
-    color: #eef;
+    background: linear-gradient(180deg, #6167CD 0%, #5A60C6 55%, #555BBF 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.18),
+      inset 0 -2px 3px rgba(0,0,0,0.12),
+      0 4px 0 #34387E,
+      0 6px 6px rgba(20,22,60,0.45);
+    color: #E4E6FF;
     font-size: 13px;
+    text-shadow: 0 -1px 0 rgba(40,43,110,0.8);
   }
   .btn-look:active {
-    transform: translateY(4px);
-    box-shadow: 0 0 0 #3B3F8C;
+    transform: translateY(3px);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.12),
+      inset 0 2px 3px rgba(0,0,0,0.15),
+      0 1px 0 #34387E,
+      0 2px 3px rgba(20,22,60,0.4);
   }
   .btn-pet {
     width: 56px;
     height: 56px;
-    border: 3px solid #7C3A5F;
-    background: #BF5E95;
-    box-shadow: 0 4px 0 #7C3A5F;
-    color: #fff;
+    background: linear-gradient(180deg, #C6649C 0%, #BF5E95 55%, #B8598F 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.18),
+      inset 0 -2px 3px rgba(0,0,0,0.12),
+      0 4px 0 #6E3354,
+      0 6px 6px rgba(40,10,30,0.45);
+    color: #FFF3F9;
     font-size: 9px;
+    text-shadow: 0 -1px 0 rgba(110,51,84,0.8);
   }
   .btn-pet:active {
-    transform: translateY(4px);
-    box-shadow: 0 0 0 #7C3A5F;
+    transform: translateY(3px);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.12),
+      inset 0 2px 3px rgba(0,0,0,0.15),
+      0 1px 0 #6E3354,
+      0 2px 3px rgba(40,10,30,0.4);
+  }
+
+  /* bottom row: speaker slots + version plate */
+  .base { display: flex; align-items: center; gap: 26px; margin-top: 12px; }
+  .grille { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+  .grille i {
+    display: block;
+    height: 4px;
+    border-radius: 2px;
+    background: #3A3E86;
+    box-shadow: inset 0 1px 1px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.38);
+  }
+  /* slots shorten toward the bottom, following the curve of the shell */
+  .grille i:nth-child(1) { width: 82px; }
+  .grille i:nth-child(2) { width: 78px; }
+  .grille i:nth-child(3) { width: 72px; }
+  .grille i:nth-child(4) { width: 64px; }
+  .plate {
+    padding: 5px 8px 4px;
+    border-radius: 3px;
+    color: #3A3E6E;
+    font-size: 8px;
+    letter-spacing: 1px;
+    background: linear-gradient(180deg, #B7BAD6 0%, #9A9EC2 50%, #8B8FB6 100%);
+    border: 1px solid #4A4E90;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.55),
+      inset 0 -1px 0 rgba(0,0,0,0.12),
+      0 1px 0 rgba(255,255,255,0.35),
+      0 -1px 1px rgba(40,43,110,0.3);
+    text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .tri {
+    width: 0;
+    height: 0;
+    border-top: 3px solid transparent;
+    border-bottom: 3px solid transparent;
+    border-left: 4px solid #3A3E6E;
+    margin-top: -1px;
   }
 </style>
 </head>
 <body>
 <div class="stage">
-  <div class="shell">
+  <div class="device">
     <div class="keyring"></div>
-    <div class="wordmark">PERI</div>
+    <div class="shell">
 
-    <div class="bezel">
-      <div class="lcd">
-        <canvas id="screen" width="222" height="180"></canvas>
-        <div class="msg" id="msg">
-          <div class="msg-text">THX FOR<br>VISITING!</div>
-          <div class="msg-rule"></div>
+      <div class="wordmark">PERI</div>
+
+      <div class="bezel-wrap">
+        <div class="bezel">
+          <div class="lcd">
+            <canvas id="screen" width="198" height="160"></canvas>
+            <div class="msg" id="msg">
+              <div class="msg-text">THX FOR<br>VISITING!</div>
+              <div class="msg-rule"></div>
+            </div>
+            <div class="scanlines"></div>
+            <div class="shade"></div>
+            <div class="glare"></div>
+          </div>
         </div>
-        <div class="scanlines"></div>
-        <div class="glare"></div>
       </div>
-    </div>
 
-    <div class="hint">tap to say hi to Peri</div>
+      <div class="hint">tap to say hi to Peri</div>
 
-    <div class="controls">
-      <div class="control">
-        <button class="btn-look" id="btn-left" aria-label="Look left">&lt;</button>
-        <span>LOOK</span>
+      <div class="controls">
+        <div class="control">
+          <button class="btn-look" id="btn-left" aria-label="Look left">&lt;</button>
+          <span>LOOK</span>
+        </div>
+        <div class="control pet">
+          <button class="btn-pet" id="btn-pet">PET</button>
+          <span>&#9829;</span>
+        </div>
+        <div class="control">
+          <button class="btn-look" id="btn-right" aria-label="Look right">&gt;</button>
+          <span>LOOK</span>
+        </div>
       </div>
-      <div class="control pet">
-        <button class="btn-pet" id="btn-pet">PET</button>
-        <span>&#9829;</span>
-      </div>
-      <div class="control">
-        <button class="btn-look" id="btn-right" aria-label="Look right">&gt;</button>
-        <span>LOOK</span>
+
+      <div class="base">
+        <div class="grille"><i></i><i></i><i></i><i></i></div>
+        <div class="plate">v2.0<i class="tri"></i></div>
       </div>
     </div>
   </div>
@@ -206,7 +354,7 @@
   const C = { bg:'#050810', teal:'#59AFB1', tlight:'#7FD0D2', tdark:'#3E8385', peri:'#8E94F2', peribright:'#B9BEFF', heart:'#BF5E95' };
 
   // sprite geometry
-  const ART = 9, OX = 48, OY = 50, CW = 222, CH = 180;
+  const ART = 8, OX = 43, OY = 44, CW = 198, CH = 160;
 
   const BODY = [
     "      AA      ",
@@ -232,6 +380,28 @@
     "   #   ",
   ];
 
+  // three tones per band: lit edge / base / edge turned away from the light
+  const TONES = {
+    H: { lit: '#A3E6E6', base: C.tlight, away: '#66B6B8' },
+    B: { lit: '#71C6C8', base: C.teal,   away: '#448E90' },
+    D: { lit: '#4B9294', base: C.tdark,  away: '#2B6163' },
+  };
+  const SPECULAR = '#B4ECEC';
+  const LID = TONES.B.away;
+  const TEAR = '#C9F4F4';
+  const BULB_DIM = ['#5A60C6', '#6B71D6'];
+  const filled = (r, c) => r >= 0 && r < BODY.length && c >= 0 && c < BODY[r].length && BODY[r][c] !== ' ';
+  const SHADED = BODY.map((row, r) => [...row].map((ch, c) => {
+    if (ch === ' ') return null;
+    if (ch === 'A') return 'bulb';
+    if (ch === 'B' && r < 2) return C.tdark; // antenna stem
+    if (r === 2 && (c === 4 || c === 5)) return SPECULAR;
+    const t = TONES[ch];
+    if (!filled(r, c + 1) || (ch === 'D' && !filled(r + 1, c))) return t.away;
+    if (!filled(r, c - 1) || !filled(r - 1, c)) return t.lit;
+    return t.base;
+  }));
+
   const cv = document.getElementById('screen');
   const msgEl = document.getElementById('msg');
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -248,8 +418,19 @@
   let hearts = [];
   let msgTimer;
 
+  // mood: left without pets she snubs, then sulks; a pet brings her back.
+  // the clock only runs while she's on screen, so readers further up the page don't use it up.
+  // add ?fast to the URL to preview the moods in seconds.
+  const FAST = /[?&]fast/.test(location.search);
+  const SNUB_AFTER = FAST ? 4000 : 40000, SULK_AFTER = FAST ? 8000 : 60000;
+  let lonely = 0, lastT = now, onScreen = true, snubSide = 1;
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(([e]) => { onScreen = e.isIntersecting; }, { threshold: 0.5 }).observe(cv);
+  }
+
   document.getElementById('btn-pet').addEventListener('click', () => {
     const t = performance.now();
+    lonely = 0;
     if (hopStart == null) {
       hopStart = t;
       hearts.push({ born: t, x: OX + 3.5 * ART });
@@ -258,7 +439,8 @@
     clearTimeout(msgTimer);
     msgTimer = setTimeout(() => msgEl.classList.remove('show'), 2600);
   });
-  const look = (dir) => () => { micro = 'look'; microDir = dir; microUntil = performance.now() + 850; };
+  // while snubbing, LOOK just changes which way she turns her face away
+  const look = (dir) => () => { snubSide = dir; micro = 'look'; microDir = dir; microUntil = performance.now() + 850; };
   document.getElementById('btn-left').addEventListener('click', look(-1));
   document.getElementById('btn-right').addEventListener('click', look(1));
 
@@ -274,9 +456,14 @@
   }
 
   function loop(t) {
-    // schedule ambient events
+    const dt = Math.min(t - lastT, 100);
+    lastT = t;
+    if (onScreen && !document.hidden && hopStart == null) lonely += dt;
+    const mood = lonely >= SULK_AFTER ? 'sulk' : lonely >= SNUB_AFTER ? 'snub' : null;
+
+    // schedule ambient events (no fidgeting while she's in a mood)
     if (t > nextBlink) { blinkUntil = t + 130; nextBlink = t + 2200 + Math.random() * 2400; }
-    if (t > nextMicro && hopStart == null && t > microUntil) {
+    if (t > nextMicro && hopStart == null && t > microUntil && !mood) {
       if (Math.random() < 0.35) { micro = 'tap'; microUntil = t + 780; }
       else { micro = 'look'; microDir = Math.random() < 0.5 ? -1 : 1; microUntil = t + 950; }
       nextMicro = t + 4600 + Math.random() * 4200;
@@ -287,7 +474,7 @@
     if (hopStart != null) {
       const p = (t - hopStart) / 560;
       if (p >= 1) { hopStart = null; }
-      else { hopPx = -Math.sin(p * Math.PI) * 34; happy = true; mouthOpen = true; }
+      else { hopPx = -Math.sin(p * Math.PI) * 30; happy = true; mouthOpen = true; }
     }
 
     // breathing bob (px)
@@ -304,32 +491,42 @@
     px(0, 0, CW, CH, C.bg);
 
     // status icons (top row)
-    for (let i = 0; i < 5; i++) px(46 + i * 30, 12, ART - 3, ART - 3, C.tdark, 0.55);
+    for (let i = 0; i < 5; i++) px(44 + i * 26, 11, ART - 3, ART - 3, C.tdark, 0.55);
 
     // ground shadow (static)
     px(OX + 2 * ART, OY + 12 * ART + 4, 10 * ART, 5, C.tdark, 0.22);
 
-    // body sprite
-    const bulb = breath > 0 ? C.peribright : C.peri;
+    // body sprite (pre-shaded, lit from the top-left like the shell)
+    const bulb = mood ? BULB_DIM[breath > 0 ? 1 : 0] : breath > 0 ? C.peribright : C.peri;
     for (let r = 0; r < BODY.length; r++) {
-      const row = BODY[r];
-      for (let ci = 0; ci < row.length; ci++) {
-        const ch = row[ci];
-        if (ch === ' ') continue;
-        const col = ch === 'A' ? bulb : ch === 'H' ? C.tlight : ch === 'D' ? C.tdark : C.teal;
-        cell(ci, r, oyPx, col);
+      for (let ci = 0; ci < BODY[r].length; ci++) {
+        const col = SHADED[r][ci];
+        if (!col) continue;
+        cell(ci, r, oyPx, col === 'bulb' ? bulb : col);
       }
     }
 
     // eyes (holes = bg) — anchor rows: left cols 3-4, right cols 9-10, top row 5
-    const drawEye = (baseCol) => {
+    const drawEye = (baseCol, side) => {
       if (happy) {
         cell(baseCol, 6, oyPx, C.bg);
         cell(baseCol + 1, 5, oyPx, C.bg);
         cell(baseCol + 2, 6, oyPx, C.bg);
+      } else if (mood === 'snub') {
+        // half-lidded, both eyes pushed to one side
+        const c = baseCol + snubSide;
+        cell(c, 5, oyPx, LID); cell(c + 1, 5, oyPx, LID);
+        const e = blink ? LID : C.bg;
+        cell(c, 6, oyPx, e); cell(c + 1, 6, oyPx, e);
       } else if (blink) {
         cell(baseCol, 6, oyPx, C.bg);
         cell(baseCol + 1, 6, oyPx, C.bg);
+      } else if (mood === 'sulk') {
+        // only the inner top corner stays open: worried brows
+        const inner = side < 0 ? baseCol + 1 : baseCol;
+        cell(inner + lookDir, 5, oyPx, C.bg);
+        cell(baseCol + lookDir, 6, oyPx, C.bg);
+        cell(baseCol + 1 + lookDir, 6, oyPx, C.bg);
       } else {
         cell(baseCol + lookDir, 5, oyPx, C.bg);
         cell(baseCol + 1 + lookDir, 5, oyPx, C.bg);
@@ -337,12 +534,20 @@
         cell(baseCol + 1 + lookDir, 6, oyPx, C.bg);
       }
     };
-    drawEye(3);
-    drawEye(9);
+    drawEye(3, -1);
+    drawEye(9, 1);
 
     // mouth
-    cell(6, 8, oyPx, C.bg); cell(7, 8, oyPx, C.bg);
-    if (mouthOpen) { cell(6, 9, oyPx, C.bg); cell(7, 9, oyPx, C.bg); }
+    if (mood === 'snub') {
+      cell(snubSide > 0 ? 8 : 5, 8, oyPx, C.bg); // "hmph", off to the side
+    } else if (mood === 'sulk') {
+      cell(6, 8, oyPx, C.bg); cell(7, 8, oyPx, C.bg);
+      cell(5, 9, oyPx, C.bg); cell(8, 9, oyPx, C.bg);
+      cell(3, 7, oyPx, TEAR);
+    } else {
+      cell(6, 8, oyPx, C.bg); cell(7, 8, oyPx, C.bg);
+      if (mouthOpen) { cell(6, 9, oyPx, C.bg); cell(7, 9, oyPx, C.bg); }
+    }
 
     // tap: little periwinkle hand poking the right screen wall
     if (tap) {
@@ -354,7 +559,7 @@
     hearts = hearts.filter(h => t - h.born < 1250);
     for (const h of hearts) {
       const p = (t - h.born) / 1250;
-      const hy = (OY - 6) + hopPx * 0.3 - p * 66;
+      const hy = (OY - 6) + hopPx * 0.3 - p * 58;
       const a = p < 0.15 ? p / 0.15 : 1 - (p - 0.15) / 0.85;
       for (let r = 0; r < HEART.length; r++) {
         const row = HEART[r];

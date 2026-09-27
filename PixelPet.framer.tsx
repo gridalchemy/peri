@@ -43,11 +43,11 @@ const C = {
 }
 
 // ---- sprite geometry ----
-const ART = 9
-const OX = 48
-const OY = 50
-const CW = 222
-const CH = 180
+const ART = 8
+const OX = 43
+const OY = 44
+const CW = 198
+const CH = 160
 
 const BODY = [
     "      AA      ",
@@ -66,6 +66,39 @@ const BODY = [
 ]
 
 const HEART = [" ## ## ", "#######", "#######", " ##### ", "  ###  ", "   #   "]
+
+// ---- shading: lit from the top-left, like the shell ----
+// three tones per band: lit edge / base / edge turned away from the light
+const TONES: Record<string, { lit: string; base: string; away: string }> = {
+    H: { lit: "#A3E6E6", base: C.tlight, away: "#66B6B8" },
+    B: { lit: "#71C6C8", base: C.teal, away: "#448E90" },
+    D: { lit: "#4B9294", base: C.tdark, away: "#2B6163" },
+}
+const SPECULAR = "#B4ECEC"
+const LID = TONES.B.away
+const TEAR = "#C9F4F4"
+const BULB_DIM = ["#5A60C6", "#6B71D6"]
+const filled = (r: number, c: number) =>
+    r >= 0 && r < BODY.length && c >= 0 && c < BODY[r].length && BODY[r][c] !== " "
+// computed once; "bulb" is resolved per frame because it breathes
+const SHADED: (string | null)[][] = BODY.map((row, r) =>
+    [...row].map((ch, c) => {
+        if (ch === " ") return null
+        if (ch === "A") return "bulb"
+        if (ch === "B" && r < 2) return C.tdark // antenna stem
+        if (r === 2 && (c === 4 || c === 5)) return SPECULAR
+        const t = TONES[ch]
+        if (!filled(r, c + 1) || (ch === "D" && !filled(r + 1, c))) return t.away
+        if (!filled(r, c - 1) || !filled(r - 1, c)) return t.lit
+        return t.base
+    })
+)
+
+// ---- moods: left without pets she snubs, then sulks; a pet brings her back.
+// The clock only runs while she's on screen, so time spent reading the rest
+// of the page doesn't count.
+const SNUB_AFTER = 40000
+const SULK_AFTER = 60000
 
 const FONT = "'Press Start 2P', monospace"
 const MONO = "'DM Mono', monospace"
@@ -121,6 +154,10 @@ interface PetState {
     nextMicro: number
     hopStart: number | null
     hearts: Heart[]
+    lonely: number // ms on screen since the last pet
+    lastT: number
+    onScreen: boolean
+    snubSide: number // which way she turns away while snubbing
 }
 
 interface Props {
@@ -140,22 +177,179 @@ interface Props {
 // Power glow breathes on a 3.45s half-cycle = Peri's ~6.9s breath rhythm.
 const CSS = `
 .pd-deck { display: flex; align-items: center; justify-content: center; gap: 0; }
-.pd-shell { position: relative; flex: none; }
 
-/* "ON" status badge — pixel-art, matches the left/right/PET button family:
-   flat fill + hard offset shadow "profile" underneath. States that Peri is on
-   (no off-state); clicking re-runs the log. No glow — the word carries it. */
-.pd-power {
-    position: absolute; right: 12px; top: 50%; margin-top: -12px;
-    padding: 5px 7px; cursor: pointer;
-    font-family: ${FONT}; font-size: 8px; letter-spacing: 1px; line-height: 1;
-    color: #0b1a1a;
-    background: ${C.teal};
-    border: 3px solid ${C.tdark};
-    border-radius: 3px;
-    box-shadow: 0 3px 0 ${C.tdark};
+/* wrapper: holds the keyring behind the shell and the floor shadow */
+.pd-device { position: relative; isolation: isolate; flex: none; width: 374px; }
+/* sizes below assume border-box; don't rely on the host page's reset */
+.pd-device, .pd-device *, .pd-device *::before, .pd-device *::after { box-sizing: border-box; }
+.pd-device::after {
+    content: ''; position: absolute; z-index: -1;
+    left: 10%; right: 10%; bottom: -30px; height: 30px;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0.75), rgba(0,0,0,0) 70%);
+    filter: blur(2px);
 }
-.pd-power:active { transform: translateY(3px); box-shadow: 0 0 0 transparent; }
+/* molded loop — sits behind the shell, only its top arc shows */
+.pd-keyring {
+    position: absolute; top: -24px; left: 50%; transform: translateX(-50%);
+    width: 52px; height: 56px;
+    border: 8px solid #A8538A; border-radius: 50% 50% 40% 40%;
+    box-shadow: inset 2px 2px 0 rgba(255,255,255,0.22), inset -2px -1px 0 rgba(0,0,0,0.25), 0 2px 0 #6E3354;
+}
+
+/* molded shell. --pd-shell / --pd-outline come from the property controls;
+   the plain background is the fallback where color-mix() isn't supported */
+.pd-shell {
+    position: relative; width: 374px; height: 470px;
+    padding: 46px 34px 30px;
+    display: flex; flex-direction: column; align-items: center; gap: 18px;
+    border-radius: 50% 50% 47% 47% / 57% 57% 43% 43%;
+    border: 1px solid var(--pd-outline);
+    background: var(--pd-shell);
+    background:
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.23  0 0 0 0 0.25  0 0 0 0 0.55  0 0 0 0.16 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+        radial-gradient(120% 85% at 30% 16%,
+            color-mix(in srgb, var(--pd-shell) 72%, white) 0%,
+            var(--pd-shell) 46%,
+            color-mix(in srgb, var(--pd-shell) 88%, black) 100%);
+    box-shadow:
+        inset 0 2px 1px rgba(255,255,255,0.5),
+        inset 5px 6px 14px rgba(255,255,255,0.16),
+        inset -6px -10px 20px rgba(59,63,140,0.38),
+        0 26px 40px rgba(0,0,0,0.55);
+}
+.pd-wordmark {
+    color: var(--pd-outline); font-size: 13px; letter-spacing: 4px; margin-right: -4px;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.4), 0 -1px 0 rgba(40,43,110,0.35);
+}
+
+/* screen surround: recessed dark panel with grip ridges */
+.pd-bezel {
+    position: relative; padding: 10px 16px 14px;
+    border-radius: 12px 12px 20px 20px;
+    background: linear-gradient(180deg, #2C2F58 0%, #1F2245 55%, #1A1C3A 100%);
+    box-shadow:
+        0 -1px 0 rgba(40,43,110,0.55),
+        0 2px 0 rgba(255,255,255,0.38),
+        inset 0 3px 5px rgba(0,0,0,0.5),
+        inset 0 -1px 0 rgba(255,255,255,0.07);
+}
+.pd-bezel::before, .pd-bezel::after {
+    content: ''; position: absolute; top: 50%; transform: translateY(-50%);
+    width: 7px; height: 24px;
+    background: repeating-linear-gradient(180deg,
+        rgba(255,255,255,0.10) 0 1px, rgba(0,0,0,0.45) 1px 3px, rgba(0,0,0,0) 3px 7px);
+}
+.pd-bezel::before { left: 5px; }
+.pd-bezel::after { right: 5px; }
+.pd-lcd {
+    position: relative; border-radius: 4px; overflow: hidden;
+    box-shadow: 0 0 0 2px #0A0C18, 0 1px 0 2px rgba(255,255,255,0.08);
+}
+.pd-overlay { position: absolute; inset: 0; pointer-events: none; }
+.pd-scanlines { background: repeating-linear-gradient(0deg, rgba(0,0,0,0.10) 0px, rgba(0,0,0,0.10) 1px, rgba(0,0,0,0) 2px, rgba(0,0,0,0) 5px); }
+/* screen sits below the glass: dark falloff at the edges */
+.pd-shade { box-shadow: inset 0 0 16px rgba(0,0,0,0.85), inset 0 4px 6px rgba(0,0,0,0.55); }
+.pd-glare { background: linear-gradient(118deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.03) 34%, rgba(255,255,255,0) 34.5%); }
+
+.pd-hint {
+    color: var(--pd-outline); opacity: 0.9;
+    font-size: 8px; letter-spacing: 1px; white-space: nowrap;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.35);
+}
+
+/* buttons: matte caps sitting in recessed wells */
+.pd-controls { display: flex; gap: 26px; align-items: flex-start; }
+.pd-control { position: relative; display: flex; flex-direction: column; align-items: center; gap: 7px; }
+/* labels invisible but kept in the layout so the shell height stays identical */
+.pd-control > span { font-size: 6px; letter-spacing: 1px; visibility: hidden; }
+.pd-control::before {
+    content: ''; position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+    width: 64px; height: 66px; border-radius: 50%;
+    background: linear-gradient(180deg, #6A70D2, #9298F3);
+    box-shadow: inset 0 3px 4px rgba(40,43,110,0.55), 0 1px 0 rgba(255,255,255,0.45);
+}
+.pd-control.pd-pet::before { width: 68px; height: 70px; }
+.pd-btn {
+    position: relative; z-index: 1; border: none; border-radius: 50%; cursor: pointer;
+    font-family: ${FONT};
+    transition: transform 0.06s ease, box-shadow 0.06s ease;
+}
+.pd-btn-look {
+    width: 52px; height: 52px; color: #E4E6FF; font-size: 13px;
+    background: linear-gradient(180deg, #6167CD 0%, #5A60C6 55%, #555BBF 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -2px 3px rgba(0,0,0,0.12),
+        0 4px 0 #34387E, 0 6px 6px rgba(20,22,60,0.45);
+    text-shadow: 0 -1px 0 rgba(40,43,110,0.8);
+}
+.pd-btn-look:active {
+    transform: translateY(3px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), inset 0 2px 3px rgba(0,0,0,0.15),
+        0 1px 0 #34387E, 0 2px 3px rgba(20,22,60,0.4);
+}
+.pd-btn-pet {
+    width: 56px; height: 56px; color: #FFF3F9; font-size: 9px;
+    background: linear-gradient(180deg, #C6649C 0%, #BF5E95 55%, #B8598F 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -2px 3px rgba(0,0,0,0.12),
+        0 4px 0 #6E3354, 0 6px 6px rgba(40,10,30,0.45);
+    text-shadow: 0 -1px 0 rgba(110,51,84,0.8);
+}
+.pd-btn-pet:active {
+    transform: translateY(3px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), inset 0 2px 3px rgba(0,0,0,0.15),
+        0 1px 0 #6E3354, 0 2px 3px rgba(40,10,30,0.4);
+}
+
+/* "ON" status key — same family as the buttons: a matte teal cap in a
+   recessed well. States that Peri is on (no off-state); clicking re-runs the log. */
+.pd-power-well {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    padding: 4px 4px 6px; border-radius: 7px;
+    background: linear-gradient(180deg, #6A70D2, #9298F3);
+    box-shadow: inset 0 2px 3px rgba(40,43,110,0.55), 0 1px 0 rgba(255,255,255,0.45);
+}
+.pd-power {
+    display: block; padding: 6px 7px 5px; cursor: pointer; border: none; border-radius: 4px;
+    font-family: ${FONT}; font-size: 8px; letter-spacing: 1px; line-height: 1;
+    color: #0B1A1A;
+    background: linear-gradient(180deg, #60B7B9 0%, ${C.teal} 55%, #54A8AA 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -2px 3px rgba(0,0,0,0.12),
+        0 3px 0 #2F6A6C, 0 4px 4px rgba(20,22,60,0.4);
+    text-shadow: 0 1px 0 rgba(255,255,255,0.25);
+    transition: transform 0.06s ease, box-shadow 0.06s ease;
+}
+.pd-power:active {
+    transform: translateY(2px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.15), inset 0 2px 3px rgba(0,0,0,0.15),
+        0 1px 0 #2F6A6C, 0 2px 3px rgba(20,22,60,0.35);
+}
+
+/* bottom row: speaker slots + version plate */
+.pd-base { display: flex; align-items: center; gap: 26px; margin-top: 12px; }
+.pd-grille { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.pd-grille > i {
+    display: block; height: 4px; border-radius: 2px; background: #3A3E86;
+    box-shadow: inset 0 1px 1px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.38);
+}
+/* slots shorten toward the bottom, following the curve of the shell */
+.pd-grille > i:nth-child(1) { width: 82px; }
+.pd-grille > i:nth-child(2) { width: 78px; }
+.pd-grille > i:nth-child(3) { width: 72px; }
+.pd-grille > i:nth-child(4) { width: 64px; }
+.pd-plate {
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 8px 4px; border-radius: 3px;
+    color: #3A3E6E; font-size: 8px; letter-spacing: 1px;
+    background: linear-gradient(180deg, #B7BAD6 0%, #9A9EC2 50%, #8B8FB6 100%);
+    border: 1px solid #4A4E90;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(0,0,0,0.12),
+        0 1px 0 rgba(255,255,255,0.35), 0 -1px 1px rgba(40,43,110,0.3);
+    text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+}
+.pd-tri {
+    width: 0; height: 0; margin-top: -1px;
+    border-top: 3px solid transparent; border-bottom: 3px solid transparent;
+    border-left: 4px solid #3A3E6E;
+}
 
 .pd-cable-h { flex: none; display: block; }
 .pd-cable-v { display: none; }
@@ -190,10 +384,8 @@ const CSS = `
 @keyframes pdBootIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 @keyframes pdFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-.pd-btn:active { transform: translateY(4px); box-shadow: 0 0 0 transparent !important; }
-
 /* Reduced-motion: drop the boot SLIDE (the vestibular-risky part) but keep the
-   gentle caret blink + power breath — they're opacity/glow, and they carry the
+   gentle caret blink — it's opacity only, and it carries the
    "she's alive" signal that's the whole point of the piece. */
 @media (prefers-reduced-motion: reduce) {
     .pd-body > * { animation-name: pdFadeIn; }
@@ -284,8 +476,24 @@ export default function PixelPet(props: Props) {
             nextMicro: now + 3800,
             hopStart: null,
             hearts: [],
+            lonely: 0,
+            lastT: now,
+            onScreen: true,
+            snubSide: 1,
         }
         petRef.current = pet
+
+        // mood clock only runs while at least half of the screen is visible
+        const io =
+            typeof IntersectionObserver === "undefined"
+                ? null
+                : new IntersectionObserver(
+                      ([e]) => {
+                          pet.onScreen = e.isIntersecting
+                      },
+                      { threshold: 0.5 }
+                  )
+        io?.observe(cv)
 
         const px = (
             x: number,
@@ -305,14 +513,27 @@ export default function PixelPet(props: Props) {
         }
 
         const loop = (t: number) => {
+            const dt = Math.min(t - pet.lastT, 100)
+            pet.lastT = t
+            if (pet.onScreen && !document.hidden && pet.hopStart == null)
+                pet.lonely += dt
+            const mood =
+                pet.lonely >= SULK_AFTER
+                    ? "sulk"
+                    : pet.lonely >= SNUB_AFTER
+                      ? "snub"
+                      : null
+
             if (t > pet.nextBlink) {
                 pet.blinkUntil = t + 130
                 pet.nextBlink = t + 2200 + Math.random() * 2400
             }
+            // no fidgeting while she's in a mood
             if (
                 t > pet.nextMicro &&
                 pet.hopStart == null &&
-                t > pet.microUntil
+                t > pet.microUntil &&
+                !mood
             ) {
                 if (Math.random() < 0.35) {
                     pet.micro = "tap"
@@ -333,7 +554,7 @@ export default function PixelPet(props: Props) {
                 if (p >= 1) {
                     pet.hopStart = null
                 } else {
-                    hopPx = -Math.sin(p * Math.PI) * 34
+                    hopPx = -Math.sin(p * Math.PI) * 30
                     happy = true
                     mouthOpen = true
                 }
@@ -351,36 +572,46 @@ export default function PixelPet(props: Props) {
             px(0, 0, CW, CH, C.bg)
 
             for (let i = 0; i < 5; i++)
-                px(46 + i * 30, 12, ART - 3, ART - 3, C.tdark, 0.55)
+                px(44 + i * 26, 11, ART - 3, ART - 3, C.tdark, 0.55)
 
             px(OX + 2 * ART, OY + 12 * ART + 4, 10 * ART, 5, C.tdark, 0.22)
 
-            const bulb = breath > 0 ? C.peribright : C.peri
-            for (let r = 0; r < BODY.length; r++) {
-                const row = BODY[r]
-                for (let ci = 0; ci < row.length; ci++) {
-                    const ch = row[ci]
-                    if (ch === " ") continue
-                    const col =
-                        ch === "A"
-                            ? bulb
-                            : ch === "H"
-                              ? C.tlight
-                              : ch === "D"
-                                ? C.tdark
-                                : C.teal
-                    cell(ci, r, oyPx, col)
+            // the bulb dims (but keeps breathing) while she's in a mood
+            const bulb = mood
+                ? BULB_DIM[breath > 0 ? 1 : 0]
+                : breath > 0
+                  ? C.peribright
+                  : C.peri
+            for (let r = 0; r < SHADED.length; r++) {
+                for (let ci = 0; ci < SHADED[r].length; ci++) {
+                    const col = SHADED[r][ci]
+                    if (!col) continue
+                    cell(ci, r, oyPx, col === "bulb" ? bulb : col)
                 }
             }
 
-            const drawEye = (baseCol: number) => {
+            const drawEye = (baseCol: number, side: number) => {
                 if (happy) {
                     cell(baseCol, 6, oyPx, C.bg)
                     cell(baseCol + 1, 5, oyPx, C.bg)
                     cell(baseCol + 2, 6, oyPx, C.bg)
+                } else if (mood === "snub") {
+                    // half-lidded, both eyes pushed to one side
+                    const c = baseCol + pet.snubSide
+                    cell(c, 5, oyPx, LID)
+                    cell(c + 1, 5, oyPx, LID)
+                    const e = blink ? LID : C.bg
+                    cell(c, 6, oyPx, e)
+                    cell(c + 1, 6, oyPx, e)
                 } else if (blink) {
                     cell(baseCol, 6, oyPx, C.bg)
                     cell(baseCol + 1, 6, oyPx, C.bg)
+                } else if (mood === "sulk") {
+                    // only the inner top corner stays open: worried brows
+                    const inner = side < 0 ? baseCol + 1 : baseCol
+                    cell(inner + look, 5, oyPx, C.bg)
+                    cell(baseCol + look, 6, oyPx, C.bg)
+                    cell(baseCol + 1 + look, 6, oyPx, C.bg)
                 } else {
                     cell(baseCol + look, 5, oyPx, C.bg)
                     cell(baseCol + 1 + look, 5, oyPx, C.bg)
@@ -388,14 +619,24 @@ export default function PixelPet(props: Props) {
                     cell(baseCol + 1 + look, 6, oyPx, C.bg)
                 }
             }
-            drawEye(3)
-            drawEye(9)
+            drawEye(3, -1)
+            drawEye(9, 1)
 
-            cell(6, 8, oyPx, C.bg)
-            cell(7, 8, oyPx, C.bg)
-            if (mouthOpen) {
-                cell(6, 9, oyPx, C.bg)
-                cell(7, 9, oyPx, C.bg)
+            if (mood === "snub") {
+                cell(pet.snubSide > 0 ? 8 : 5, 8, oyPx, C.bg) // "hmph", off to the side
+            } else if (mood === "sulk") {
+                cell(6, 8, oyPx, C.bg)
+                cell(7, 8, oyPx, C.bg)
+                cell(5, 9, oyPx, C.bg)
+                cell(8, 9, oyPx, C.bg)
+                cell(3, 7, oyPx, TEAR)
+            } else {
+                cell(6, 8, oyPx, C.bg)
+                cell(7, 8, oyPx, C.bg)
+                if (mouthOpen) {
+                    cell(6, 9, oyPx, C.bg)
+                    cell(7, 9, oyPx, C.bg)
+                }
             }
 
             if (tap) {
@@ -406,7 +647,7 @@ export default function PixelPet(props: Props) {
             pet.hearts = pet.hearts.filter((hh) => t - hh.born < 1250)
             for (const hh of pet.hearts) {
                 const p = (t - hh.born) / 1250
-                const hy = OY - 6 + hopPx * 0.3 - p * 66
+                const hy = OY - 6 + hopPx * 0.3 - p * 58
                 const a = p < 0.15 ? p / 0.15 : 1 - (p - 0.15) / 0.85
                 for (let r = 0; r < HEART.length; r++) {
                     const row = HEART[r]
@@ -431,6 +672,7 @@ export default function PixelPet(props: Props) {
         return () => {
             cancelAnimationFrame(pet.raf)
             clearTimeout(msgTimer.current)
+            io?.disconnect()
         }
     }, [])
 
@@ -439,6 +681,7 @@ export default function PixelPet(props: Props) {
         if (!pet) return
         if (soundEnabled) safePlay(petSound, volume)
         const t = performance.now()
+        pet.lonely = 0
         if (pet.hopStart == null) {
             pet.hopStart = t
             pet.hearts.push({ born: t, x: OX + 3.5 * ART })
@@ -451,6 +694,7 @@ export default function PixelPet(props: Props) {
         const pet = petRef.current
         if (!pet) return
         if (soundEnabled) safePlay(lookSound, volume)
+        pet.snubSide = dir // while snubbing, LOOK changes which way she turns away
         pet.micro = "look"
         pet.microDir = dir
         pet.microUntil = performance.now() + 850
@@ -459,19 +703,6 @@ export default function PixelPet(props: Props) {
     const onPower = () => {
         if (soundEnabled) safePlay(powerSound, volume)
         setBoot((b) => b + 1)
-    }
-
-    const lookBtn: CSSProperties = {
-        width: 52,
-        height: 52,
-        border: `3px solid ${outlineColor}`,
-        borderRadius: "50%",
-        cursor: "pointer",
-        background: "#5A60C6",
-        boxShadow: `0 4px 0 ${outlineColor}`,
-        color: "#eef",
-        fontFamily: FONT,
-        fontSize: 13,
     }
 
     // term-body children, in order, each with a staggered boot-in delay
@@ -509,219 +740,141 @@ export default function PixelPet(props: Props) {
 
             <div className={stacked ? "pd-deck pd-stacked" : "pd-deck"}>
                 {/* ─── Peri ─── */}
-                <div
-                    className="pd-shell"
-                    style={{
-                        width: 374,
-                        padding: "64px 34px 34px",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: 20,
-                        borderRadius: "50% 50% 47% 47% / 57% 57% 43% 43%",
-                        background: shellColor,
-                        border: `4px solid ${outlineColor}`,
-                    }}
-                >
-                    {/* keyring nub */}
+                <div className="pd-device">
+                    <div className="pd-keyring" />
                     <div
-                        style={{
-                            position: "absolute",
-                            top: 14,
-                            left: "50%",
-                            transform: "translateX(-50%)",
-                            width: 34,
-                            height: 20,
-                            border: "4px solid #6B71D6",
-                            borderRadius: "12px 12px 4px 4px",
-                            background: "transparent",
-                        }}
-                    />
-
-                    {/* "ON" status badge (click = re-run log, with sound) */}
-                    <button
-                        type="button"
-                        title="Re-run log"
-                        className="pd-power"
-                        onClick={onPower}
+                        className="pd-shell"
+                        style={
+                            {
+                                "--pd-shell": shellColor,
+                                "--pd-outline": outlineColor,
+                            } as CSSProperties
+                        }
                     >
-                        ON
-                    </button>
-
-                    <div
-                        style={{
-                            color: outlineColor,
-                            fontSize: 12,
-                            letterSpacing: 2,
-                            textShadow: "0 1px 0 rgba(255,255,255,0.28)",
-                        }}
-                    >
-                        PERI
-                    </div>
-
-                    {/* bezel */}
-                    <div
-                        style={{
-                            position: "relative",
-                            padding: 4,
-                            borderRadius: 8,
-                            background: "#0d0f18",
-                            border: `3px solid ${outlineColor}`,
-                        }}
-                    >
-                        <div
-                            style={{
-                                position: "relative",
-                                borderRadius: 5,
-                                overflow: "hidden",
-                            }}
-                        >
-                            <canvas
-                                ref={canvasRef}
-                                width={CW}
-                                height={CH}
-                                style={{
-                                    display: "block",
-                                    width: CW,
-                                    height: CH,
-                                    imageRendering: "pixelated",
-                                    background: C.bg,
-                                }}
-                            />
-                            {/* message overlay */}
-                            <div
-                                style={{
-                                    position: "absolute",
-                                    inset: 0,
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: 12,
-                                    pointerEvents: "none",
-                                    background: "rgba(5,8,16,0.74)",
-                                    opacity: msg ? 1 : 0,
-                                    transition: "opacity 0.4s ease",
-                                }}
+                        {/* "ON" status key (click = re-run log, with sound) */}
+                        <div className="pd-power-well">
+                            <button
+                                type="button"
+                                title="Re-run log"
+                                className="pd-power"
+                                onClick={onPower}
                             >
-                                <div
+                                ON
+                            </button>
+                        </div>
+
+                        <div className="pd-wordmark">PERI</div>
+
+                        <div className="pd-bezel">
+                            <div className="pd-lcd">
+                                <canvas
+                                    ref={canvasRef}
+                                    width={CW}
+                                    height={CH}
                                     style={{
-                                        color: C.teal,
-                                        fontFamily: FONT,
-                                        fontSize: 15,
-                                        lineHeight: 1.9,
-                                        letterSpacing: 2,
-                                        textAlign: "center",
-                                        textShadow:
-                                            "0 0 8px rgba(89,175,177,0.4)",
-                                        whiteSpace: "pre-line",
-                                    }}
-                                >
-                                    {message}
-                                </div>
-                                <div
-                                    style={{
-                                        width: 118,
-                                        height: 3,
-                                        background: C.heart,
+                                        display: "block",
+                                        width: CW,
+                                        height: CH,
+                                        imageRendering: "pixelated",
+                                        background: C.bg,
                                     }}
                                 />
+                                {/* message overlay */}
+                                <div
+                                    style={{
+                                        position: "absolute",
+                                        inset: 0,
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        gap: 12,
+                                        pointerEvents: "none",
+                                        background: "rgba(5,8,16,0.74)",
+                                        opacity: msg ? 1 : 0,
+                                        transition: "opacity 0.4s ease",
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            color: C.teal,
+                                            fontFamily: FONT,
+                                            fontSize: 13,
+                                            lineHeight: 1.9,
+                                            letterSpacing: 2,
+                                            textAlign: "center",
+                                            textShadow:
+                                                "0 0 8px rgba(89,175,177,0.4)",
+                                            whiteSpace: "pre-line",
+                                        }}
+                                    >
+                                        {message}
+                                    </div>
+                                    <div
+                                        style={{
+                                            width: 104,
+                                            height: 3,
+                                            background: C.heart,
+                                        }}
+                                    />
+                                </div>
+                                <div className="pd-overlay pd-scanlines" />
+                                <div className="pd-overlay pd-shade" />
+                                <div className="pd-overlay pd-glare" />
                             </div>
-                            {/* scanlines */}
-                            <div
-                                style={{
-                                    position: "absolute",
-                                    inset: 0,
-                                    pointerEvents: "none",
-                                    background:
-                                        "repeating-linear-gradient(0deg, rgba(0,0,0,0.10) 0px, rgba(0,0,0,0.10) 1px, rgba(0,0,0,0) 2px, rgba(0,0,0,0) 5px)",
-                                }}
-                            />
-                            {/* glare */}
-                            <div
-                                style={{
-                                    position: "absolute",
-                                    inset: 0,
-                                    pointerEvents: "none",
-                                    background:
-                                        "linear-gradient(115deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 40%)",
-                                }}
-                            />
-                        </div>
-                    </div>
-
-                    <div
-                        style={{
-                            color: outlineColor,
-                            fontSize: 8,
-                            letterSpacing: 1,
-                            opacity: 0.85,
-                            whiteSpace: "nowrap",
-                        }}
-                    >
-                        tap to say hi to Peri
-                    </div>
-
-                    <div
-                        style={{
-                            display: "flex",
-                            gap: 26,
-                            alignItems: "flex-start",
-                        }}
-                    >
-                        <div style={colStyle}>
-                            <button
-                                type="button"
-                                aria-label="Look left"
-                                className="pd-btn"
-                                onClick={onLook(-1)}
-                                style={lookBtn}
-                            >
-                                &lt;
-                            </button>
-                            <span aria-hidden="true" style={labelStyle()}>
-                                LOOK
-                            </span>
                         </div>
 
-                        <div style={colStyle}>
-                            <button
-                                type="button"
-                                className="pd-btn"
-                                onClick={onPet}
-                                style={{
-                                    width: 56,
-                                    height: 56,
-                                    border: "3px solid #7C3A5F",
-                                    borderRadius: "50%",
-                                    cursor: "pointer",
-                                    background: "#BF5E95",
-                                    boxShadow: "0 4px 0 #7C3A5F",
-                                    color: "#fff",
-                                    fontFamily: FONT,
-                                    fontSize: 9,
-                                }}
-                            >
-                                PET
-                            </button>
-                            <span aria-hidden="true" style={labelStyle()}>
-                                ♥
-                            </span>
+                        <div className="pd-hint">tap to say hi to Peri</div>
+
+                        <div className="pd-controls">
+                            <div className="pd-control">
+                                <button
+                                    type="button"
+                                    aria-label="Look left"
+                                    className="pd-btn pd-btn-look"
+                                    onClick={onLook(-1)}
+                                >
+                                    &lt;
+                                </button>
+                                <span aria-hidden="true">LOOK</span>
+                            </div>
+
+                            <div className="pd-control pd-pet">
+                                <button
+                                    type="button"
+                                    className="pd-btn pd-btn-pet"
+                                    onClick={onPet}
+                                >
+                                    PET
+                                </button>
+                                <span aria-hidden="true">♥</span>
+                            </div>
+
+                            <div className="pd-control">
+                                <button
+                                    type="button"
+                                    aria-label="Look right"
+                                    className="pd-btn pd-btn-look"
+                                    onClick={onLook(1)}
+                                >
+                                    &gt;
+                                </button>
+                                <span aria-hidden="true">LOOK</span>
+                            </div>
                         </div>
 
-                        <div style={colStyle}>
-                            <button
-                                type="button"
-                                aria-label="Look right"
-                                className="pd-btn"
-                                onClick={onLook(1)}
-                                style={lookBtn}
-                            >
-                                &gt;
-                            </button>
-                            <span aria-hidden="true" style={labelStyle()}>
-                                LOOK
-                            </span>
+                        {/* speaker slots + version plate */}
+                        <div className="pd-base" aria-hidden="true">
+                            <div className="pd-grille">
+                                <i />
+                                <i />
+                                <i />
+                                <i />
+                            </div>
+                            <div className="pd-plate">
+                                v2.0
+                                <i className="pd-tri" />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -798,19 +951,6 @@ export default function PixelPet(props: Props) {
         </div>
     )
 }
-
-const colStyle: CSSProperties = {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 7,
-}
-// invisible but still in the layout so the shell height stays identical
-const labelStyle = (): CSSProperties => ({
-    fontSize: 6,
-    letterSpacing: 1,
-    visibility: "hidden",
-})
 
 PixelPet.defaultProps = {
     message: "THX FOR\nVISITING!",
