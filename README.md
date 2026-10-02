@@ -52,4 +52,9 @@ follows. (An `<img src="…svg">` can't see your page's CSS, so it always shows 
 
 ## License
 
-[MIT](LICENSE)
+The code is [MIT](LICENSE). Fork it, run it, change it, build your own thing with it.
+
+**Peri's brand is not.** The marks in [`brand/`](brand/), the Peri name and wordmark, and her
+likeness used as a logo are reserved — see [`brand/NOTICE.md`](brand/NOTICE.md). You're welcome
+to use them to refer to this project; you may not use them as the branding of your own. If you
+fork and ship something, swap in your own mark.
