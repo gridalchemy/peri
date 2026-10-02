@@ -12,6 +12,9 @@ Copyright © 2026 gridalchemy. All rights reserved.
 - Peri's likeness — her silhouette, her antenna, her face — when used as a logo, an icon,
   an avatar, or anything else that identifies a product, a service, or an organisation.
 
+Her default dress is teal with a periwinkle bulb, but she also appears in other palettes.
+The mark is her form, not any particular colour.
+
 ## What this does not cover
 
 The source code in this repository, including the sprite data that draws Peri on screen,
