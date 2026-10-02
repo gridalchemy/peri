@@ -34,6 +34,17 @@ python -m http.server 8000
 
 The Framer component is used inside Framer — paste `PixelPet.framer.tsx` into a code component there.
 
+## Brand
+
+The `brand/` folder holds Peri's marks — a smooth silhouette, a pixel-true one, outlines, an
+app tile and a favicon, all built on the same 32×32 grid mapped 1:1 off her sprite. Open
+[`brand/index.html`](brand/index.html) to see the set at every size.
+
+She can wear another palette. The duotone marks read two CSS custom properties,
+`--peri-body` and `--peri-bulb`, each falling back to her own colours; the one-colour and
+outline marks use `currentColor`. Set them on any ancestor of an inlined `<svg>` and she
+follows. (An `<img src="…svg">` can't see your page's CSS, so it always shows the fallbacks.)
+
 ## Credits
 
 - Peri, art & code — [@gridalchemy](https://github.com/gridalchemy)

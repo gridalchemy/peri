@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" fill="none" role="img" aria-label="Peri">
+  <!-- recolour via the CSS custom properties peri-body and peri-bulb; the hex values below are their fallbacks -->
+  <g shape-rendering="crispEdges">
+    <path fill="var(--peri-body, #59AFB1)" d="M12 3h2v2h-2zM18 3h2v2h-2zM6 5h2v2h-2zM8 5h2v2h-2zM10 5h2v2h-2zM12 5h2v2h-2zM18 5h2v2h-2zM20 5h2v2h-2zM22 5h2v2h-2zM24 5h2v2h-2zM4 7h2v2h-2zM6 7h2v2h-2zM24 7h2v2h-2zM26 7h2v2h-2zM2 9h2v2h-2zM4 9h2v2h-2zM26 9h2v2h-2zM28 9h2v2h-2zM2 11h2v2h-2zM28 11h2v2h-2zM2 13h2v2h-2zM8 13h2v2h-2zM10 13h2v2h-2zM20 13h2v2h-2zM22 13h2v2h-2zM28 13h2v2h-2zM2 15h2v2h-2zM8 15h2v2h-2zM10 15h2v2h-2zM20 15h2v2h-2zM22 15h2v2h-2zM28 15h2v2h-2zM2 17h2v2h-2zM28 17h2v2h-2zM2 19h2v2h-2zM14 19h2v2h-2zM16 19h2v2h-2zM28 19h2v2h-2zM2 21h2v2h-2zM28 21h2v2h-2zM2 23h2v2h-2zM4 23h2v2h-2zM26 23h2v2h-2zM28 23h2v2h-2zM4 25h2v2h-2zM6 25h2v2h-2zM24 25h2v2h-2zM26 25h2v2h-2zM6 27h2v2h-2zM12 27h2v2h-2zM14 27h2v2h-2zM16 27h2v2h-2zM18 27h2v2h-2zM24 27h2v2h-2zM6 29h2v2h-2zM8 29h2v2h-2zM10 29h2v2h-2zM12 29h2v2h-2zM18 29h2v2h-2zM20 29h2v2h-2zM22 29h2v2h-2zM24 29h2v2h-2z"/>
+    <path fill="var(--peri-bulb, #8E94F2)" d="M12 1h2v2h-2zM14 1h2v2h-2zM16 1h2v2h-2zM18 1h2v2h-2z"/>
+  </g>
+</svg>
