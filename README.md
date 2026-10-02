@@ -45,6 +45,12 @@ She can wear another palette. The duotone marks read two CSS custom properties,
 outline marks use `currentColor`. Set them on any ancestor of an inlined `<svg>` and she
 follows. (An `<img src="…svg">` can't see your page's CSS, so it always shows the fallbacks.)
 
+To use a mark, copy the `.svg` — there is nothing to install and nothing to run. The
+scripts in [`tools/`](tools/) only matter if you want to change something all the marks
+share, like her silhouette or the artboard: `build-brand.py` writes the seven `.svg` files
+from one definition, and `build-sheet.py` writes the contact sheet from those. They need
+Python, they are optional, and the toy above still has no build step and no dependencies.
+
 ## Credits
 
 - Peri, art & code — [@gridalchemy](https://github.com/gridalchemy)
