@@ -1,0 +1,8 @@
+# Git stores text as LF regardless, but on Windows it checks files out with CRLF.
+# The scripts in tools/ write LF, so after a fresh checkout every generated file
+# would look modified the moment a generator ran — a diff with no change in it.
+# Pinning these to LF in the working tree keeps `git status` honest.
+
+brand/*.svg      text eol=lf
+brand/index.html text eol=lf
+tools/*.py       text eol=lf
