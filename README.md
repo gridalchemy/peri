@@ -38,7 +38,8 @@ The Framer component is used inside Framer — paste `PixelPet.framer.tsx` into 
 
 The `brand/` folder holds Peri's marks — a smooth silhouette, a pixel-true one, outlines, an
 app tile and a favicon, all built on the same 32×32 grid mapped 1:1 off her sprite. Open
-[`brand/index.html`](brand/index.html) to see the set at every size.
+[`brand/index.html`](brand/index.html) to see the set at every size, and
+[`brand/README.md`](brand/README.md) for when to use pixel Peri and when a smooth mark.
 
 She can wear another palette. The duotone marks read two CSS custom properties,
 `--peri-body` and `--peri-bulb`, each falling back to her own colours; the one-colour and
