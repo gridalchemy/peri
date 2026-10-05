@@ -29,7 +29,7 @@
   .device {
     position: relative;
     isolation: isolate;
-    width: 374px;
+    width: 358px;
   }
   .device::after {
     content: '';
@@ -61,7 +61,7 @@
 
   .shell {
     position: relative;
-    width: 374px;
+    width: 358px;
     height: 452px;
     padding: 44px 34px 30px;
     display: flex;
@@ -258,7 +258,8 @@
   }
 
   /* bottom row: speaker slots + version plate */
-  .base { display: flex; align-items: center; gap: 26px; margin-top: 0; }
+  /* plate's top edge sits flush with the first slot */
+  .base { display: flex; align-items: flex-start; gap: 26px; margin-top: 0; }
   .grille { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
   .grille i {
     display: block;
@@ -273,7 +274,7 @@
   .grille i:nth-child(3) { width: 72px; }
   .grille i:nth-child(4) { width: 64px; }
   .plate {
-    padding: 5px 8px 4px;
+    padding: 6px 9px 5px;
     border-radius: 3px;
     color: #3A3E6E;
     font-size: 8px;

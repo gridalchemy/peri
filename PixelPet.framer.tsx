@@ -8,6 +8,7 @@
 
 import {
     useEffect,
+    useId,
     useRef,
     useState,
     type CSSProperties,
@@ -179,7 +180,7 @@ const CSS = `
 .pd-deck { display: flex; align-items: center; justify-content: center; gap: 0; }
 
 /* wrapper: holds the keyring behind the shell and the floor shadow */
-.pd-device { position: relative; isolation: isolate; flex: none; width: 374px; }
+.pd-device { position: relative; isolation: isolate; flex: none; width: 358px; }
 /* sizes below assume border-box; don't rely on the host page's reset */
 .pd-device, .pd-device *, .pd-device *::before, .pd-device *::after { box-sizing: border-box; }
 .pd-device::after {
@@ -199,7 +200,7 @@ const CSS = `
 /* molded shell. --pd-shell / --pd-outline come from the property controls;
    the plain background is the fallback where color-mix() isn't supported */
 .pd-shell {
-    position: relative; width: 374px; height: 452px;
+    position: relative; width: 358px; height: 452px;
     padding: 44px 34px 30px;
     display: flex; flex-direction: column; align-items: center; gap: 18px;
     border-radius: 50% 50% 47% 47% / 57% 57% 43% 43%;
@@ -300,9 +301,11 @@ const CSS = `
 }
 
 /* "ON" status key — same family as the buttons: a matte teal cap in a
-   recessed well. States that Peri is on (no off-state); clicking re-runs the log. */
+   recessed well. States that Peri is on (no off-state); clicking re-runs the log.
+   Tucked 8px off the screen surround (half the bezel is 115px), not against the
+   shell's edge, so the sides can stay slim. */
 .pd-power-well {
-    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    position: absolute; left: calc(50% + 123px); top: 50%; transform: translateY(-50%);
     padding: 4px 4px 6px; border-radius: 7px;
     background: linear-gradient(180deg, #6A70D2, #9298F3);
     box-shadow: inset 0 2px 3px rgba(40,43,110,0.55), 0 1px 0 rgba(255,255,255,0.45);
@@ -323,8 +326,17 @@ const CSS = `
         0 1px 0 #2F6A6C, 0 2px 3px rgba(20,22,60,0.35);
 }
 
-/* bottom row: speaker slots + version plate */
-.pd-base { display: flex; align-items: center; gap: 26px; margin-top: 0; }
+/* side port: where the link cable meets the shell (desktop only) */
+.pd-port {
+    position: absolute; right: -1px; top: 50%; transform: translateY(-50%);
+    width: 7px; height: 20px; border-radius: 3px 0 0 3px;
+    background: linear-gradient(180deg, #1A1C3A, #2C2F58);
+    box-shadow: inset 1px 1px 2px rgba(0,0,0,0.6), -1px 0 0 rgba(255,255,255,0.35);
+}
+
+/* bottom row: speaker slots + version plate; the plate's top edge sits flush
+   with the first slot */
+.pd-base { display: flex; align-items: flex-start; gap: 26px; margin-top: 0; }
 .pd-grille { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
 .pd-grille > i {
     display: block; height: 4px; border-radius: 2px; background: #3A3E86;
@@ -337,7 +349,7 @@ const CSS = `
 .pd-grille > i:nth-child(4) { width: 64px; }
 .pd-plate {
     display: flex; align-items: center; gap: 5px;
-    padding: 5px 8px 4px; border-radius: 3px;
+    padding: 6px 9px 5px; border-radius: 3px;
     color: #3A3E6E; font-size: 8px; letter-spacing: 1px;
     background: linear-gradient(180deg, #B7BAD6 0%, #9A9EC2 50%, #8B8FB6 100%);
     border: 1px solid #4A4E90;
@@ -396,6 +408,7 @@ const CSS = `
 .pd-deck.pd-stacked { flex-direction: column; }
 .pd-deck.pd-stacked .pd-cable-h { display: none; }
 .pd-deck.pd-stacked .pd-cable-v { display: block; }
+.pd-deck.pd-stacked .pd-port { display: none; }
 .pd-deck.pd-stacked .pd-terminal { width: 320px; }
 
 .pd-bio {
@@ -408,7 +421,7 @@ const CSS = `
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight auto
- * @framerIntrinsicWidth 812
+ * @framerIntrinsicWidth 796
  * @framerIntrinsicHeight 620
  */
 export default function PixelPet(props: Props) {
@@ -430,6 +443,8 @@ export default function PixelPet(props: Props) {
     const [msg, setMsg] = useState(false)
     const [boot, setBoot] = useState(0) // bump to replay the log boot stagger
     const [stacked, setStacked] = useState(false)
+    // per-instance prefix for the cable's SVG ids, so two Peris on one page don't share them
+    const uid = "pd" + useId().replace(/:/g, "")
 
     // Responsive by the component's OWN width (works with Framer's sizing /
     // breakpoints), stacking Peri above the terminal when it gets narrow.
@@ -437,7 +452,7 @@ export default function PixelPet(props: Props) {
         const el = wrapRef.current
         if (!el || typeof ResizeObserver === "undefined") return
         const ro = new ResizeObserver((entries) => {
-            setStacked(entries[0].contentRect.width < 800)
+            setStacked(entries[0].contentRect.width < 784)
         })
         ro.observe(el)
         return () => ro.disconnect()
@@ -763,6 +778,8 @@ export default function PixelPet(props: Props) {
                             </button>
                         </div>
 
+                        <div className="pd-port" aria-hidden="true" />
+
                         <div className="pd-wordmark">PERI</div>
 
                         <div className="pd-bezel">
@@ -879,7 +896,38 @@ export default function PixelPet(props: Props) {
                     </div>
                 </div>
 
-                {/* ─── cable: horizontal (desktop), gentle catenary sag ─── */}
+                {/* plug parts shared by both cables. Its own zero-size svg, never
+                    display:none, because gradients inside a hidden svg don't render
+                    and the horizontal cable is hidden when stacked. */}
+                <svg
+                    width="0"
+                    height="0"
+                    style={{ position: "absolute" }}
+                    aria-hidden="true"
+                >
+                    <defs>
+                        <linearGradient id={`${uid}-plug`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0" stopColor="#71C6C8" />
+                            <stop offset="0.5" stopColor={C.teal} />
+                            <stop offset="1" stopColor="#448E90" />
+                        </linearGradient>
+                        <filter id={`${uid}-soft`} x="-20%" y="-50%" width="140%" height="200%">
+                            <feGaussianBlur stdDeviation="1.6" />
+                        </filter>
+                        <g id={`${uid}-end`}>
+                            <rect x="9" y="27" width="5" height="6" rx="1" fill={`url(#${uid}-plug)`} />
+                            <rect x="0" y="23" width="10" height="15" rx="2.5" fill="#2F6A6C" />
+                            <rect x="0" y="22" width="10" height="14" rx="2.5" fill={`url(#${uid}-plug)`} />
+                            <rect x="1" y="22.6" width="8" height="1" rx="0.5" fill="#B4ECEC" fillOpacity="0.6" />
+                            <rect x="3" y="26" width="1" height="7" fill="#2F6A6C" fillOpacity="0.5" />
+                            <rect x="6" y="26" width="1" height="7" fill="#2F6A6C" fillOpacity="0.5" />
+                        </g>
+                    </defs>
+                </svg>
+
+                {/* ─── cable: horizontal (desktop), gentle catenary sag ───
+                    Molded like the ON key: lit top, base teal, dark underside,
+                    and a round cable with a highlight along its top. */}
                 <svg
                     className="pd-cable-h"
                     width="76"
@@ -888,19 +936,15 @@ export default function PixelPet(props: Props) {
                     fill="none"
                     aria-hidden="true"
                 >
-                    <rect x="0" y="24" width="9" height="12" fill={C.teal} />
-                    <rect x="9" y="28" width="4" height="4" fill={C.teal} />
-                    <path
-                        d="M13 30 Q38 52 63 30"
-                        stroke={C.teal}
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                    />
-                    <rect x="63" y="28" width="4" height="4" fill={C.teal} />
-                    <rect x="67" y="24" width="9" height="12" fill={C.teal} />
+                    <path d="M13 36 Q38 58 63 36" stroke="rgba(0,0,0,0.55)" strokeWidth="4" strokeLinecap="round" filter={`url(#${uid}-soft)`} />
+                    <path d="M12 30 Q38 52 64 30" stroke="#2F6A6C" strokeWidth="5" strokeLinecap="round" />
+                    <path d="M12 30 Q38 52 64 30" stroke={C.teal} strokeWidth="3" strokeLinecap="round" />
+                    <path d="M14 29.2 Q38 50.2 62 29.2" stroke="#A3E6E6" strokeOpacity="0.55" strokeWidth="1" strokeLinecap="round" />
+                    <use href={`#${uid}-end`} />
+                    <use href={`#${uid}-end`} transform="translate(76 0) scale(-1 1)" />
                 </svg>
 
-                {/* ─── cable: vertical (mobile only) ─── */}
+                {/* ─── cable: vertical (mobile only), the same plug turned on its side ─── */}
                 <svg
                     className="pd-cable-v"
                     width="60"
@@ -909,16 +953,12 @@ export default function PixelPet(props: Props) {
                     fill="none"
                     aria-hidden="true"
                 >
-                    <rect x="24" y="0" width="12" height="9" fill={C.teal} />
-                    <rect x="28" y="9" width="4" height="4" fill={C.teal} />
-                    <path
-                        d="M30 13 L30 27"
-                        stroke={C.teal}
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                    />
-                    <rect x="28" y="27" width="4" height="4" fill={C.teal} />
-                    <rect x="24" y="31" width="12" height="9" fill={C.teal} />
+                    <path d="M30 12 L30 28" stroke="#2F6A6C" strokeWidth="5" strokeLinecap="round" />
+                    <path d="M30 12 L30 28" stroke={C.teal} strokeWidth="3" strokeLinecap="round" />
+                    <path d="M29.2 13 L29.2 27" stroke="#A3E6E6" strokeOpacity="0.55" strokeWidth="1" strokeLinecap="round" />
+                    {/* the horizontal plug end turned upright; both keep their lit edge on the left */}
+                    <use href={`#${uid}-end`} transform="matrix(0 1 1 0 0 0)" />
+                    <use href={`#${uid}-end`} transform="matrix(0 -1 1 0 0 40)" />
                 </svg>
 
                 {/* ─── terminal ─── */}
