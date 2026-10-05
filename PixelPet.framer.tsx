@@ -77,7 +77,11 @@ const TONES: Record<string, { lit: string; base: string; away: string }> = {
 }
 const SPECULAR = "#B4ECEC"
 const LID = TONES.B.away
+// asleep: the lid's lower row one tone darker, where it meets the cheek
+const CREASE = TONES.D.away
 const TEAR = "#C9F4F4"
+// a pixel z for sleep, drawn in finer cells than the body so it stays small
+const Z = ["####", "  # ", " #  ", "####"]
 const BULB_DIM = ["#5A60C6", "#6B71D6"]
 const filled = (r: number, c: number) =>
     r >= 0 && r < BODY.length && c >= 0 && c < BODY[r].length && BODY[r][c] !== " "
@@ -159,6 +163,10 @@ interface PetState {
     lastT: number
     onScreen: boolean
     snubSide: number // which way she turns away while snubbing
+    asleep: boolean
+    sleptAt: number
+    wokeAt: number
+    peekUntil: number // a pet while she sleeps opens one eye for a moment
 }
 
 interface Props {
@@ -175,7 +183,6 @@ interface Props {
 }
 
 // scoped CSS. All classes prefixed `pd-` so nothing leaks into the host page.
-// Power glow breathes on a 3.45s half-cycle = Peri's ~6.9s breath rhythm.
 const CSS = `
 .pd-deck { display: flex; align-items: center; justify-content: center; gap: 0; }
 
@@ -300,19 +307,22 @@ const CSS = `
         0 1px 0 #6E3354, 0 2px 3px rgba(40,10,30,0.4);
 }
 
-/* "ON" status key — same family as the buttons: a matte teal cap in a
-   recessed well. States that Peri is on (no off-state); clicking re-runs the log.
-   Tucked 8px off the screen surround (half the bezel is 115px), not against the
-   shell's edge, so the sides can stay slim. */
+/* power key — same family as the buttons: a matte cap in a recessed well. Its
+   label says what a press does: a red OFF while she's awake, a teal ON while she
+   sleeps. Centred in the gap between the screen surround (115px from the middle)
+   and the shell's edge (179px), so the sides can stay slim. */
 .pd-power-well {
-    position: absolute; left: calc(50% + 123px); top: 50%; transform: translateY(-50%);
+    position: absolute; left: calc(50% + 147px); top: 50%; transform: translate(-50%, -50%);
     padding: 4px 4px 6px; border-radius: 7px;
     background: linear-gradient(180deg, #6A70D2, #9298F3);
     box-shadow: inset 0 2px 3px rgba(40,43,110,0.55), 0 1px 0 rgba(255,255,255,0.45);
 }
+/* one fixed width for ON and OFF so the key doesn't jump; letter-spacing 0 like
+   PET, and 1px of left padding to balance the glyphs' own right bearing */
 .pd-power {
-    display: block; padding: 6px 7px 5px; cursor: pointer; border: none; border-radius: 4px;
-    font-family: ${FONT}; font-size: 8px; letter-spacing: 1px; line-height: 1;
+    display: block; width: 36px; padding: 6px 0 5px 1px; text-align: center;
+    cursor: pointer; border: none; border-radius: 4px;
+    font-family: ${FONT}; font-size: 8px; letter-spacing: 0; line-height: 1;
     color: #0B1A1A;
     background: linear-gradient(180deg, #60B7B9 0%, ${C.teal} 55%, #54A8AA 100%);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -2px 3px rgba(0,0,0,0.12),
@@ -325,6 +335,24 @@ const CSS = `
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.15), inset 0 2px 3px rgba(0,0,0,0.15),
         0 1px 0 #2F6A6C, 0 2px 3px rgba(20,22,60,0.35);
 }
+/* OFF: a warm true red, kept clear of PET's magenta, with its own dark edge */
+.pd-deck:not(.pd-asleep) .pd-power {
+    color: #FFF1EF; text-shadow: 0 -1px 0 rgba(124,38,33,0.8);
+    background: linear-gradient(180deg, #E35A50 0%, #D94B43 55%, #CF443D 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -2px 3px rgba(0,0,0,0.12),
+        0 3px 0 #7C2621, 0 4px 4px rgba(40,10,10,0.4);
+}
+.pd-deck:not(.pd-asleep) .pd-power:active {
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.15), inset 0 2px 3px rgba(0,0,0,0.15),
+        0 1px 0 #7C2621, 0 2px 3px rgba(40,10,10,0.35);
+}
+
+/* asleep: the backlight dims and the terminal goes dark */
+.pd-dim { background: ${C.bg}; opacity: 0; transition: opacity 1.2s ease; }
+.pd-asleep .pd-dim { opacity: 0.35; }
+.pd-terminal, .pd-body { transition: background 1.2s ease, border-color 1.2s ease; }
+.pd-asleep .pd-body { background: #070912; }
+.pd-asleep .pd-terminal { border-color: rgba(89,175,177,0.07); }
 
 /* side port: where the link cable meets the shell (desktop only) */
 .pd-port {
@@ -442,6 +470,7 @@ export default function PixelPet(props: Props) {
     const msgTimer = useRef<ReturnType<typeof setTimeout>>()
     const [msg, setMsg] = useState(false)
     const [boot, setBoot] = useState(0) // bump to replay the log boot stagger
+    const [asleep, setAsleep] = useState(false)
     const [stacked, setStacked] = useState(false)
     // per-instance prefix for the cable's SVG ids, so two Peris on one page don't share them
     const uid = "pd" + useId().replace(/:/g, "")
@@ -495,6 +524,10 @@ export default function PixelPet(props: Props) {
             lastT: now,
             onScreen: true,
             snubSide: 1,
+            asleep: false,
+            sleptAt: 0,
+            wokeAt: -1e9,
+            peekUntil: 0,
         }
         petRef.current = pet
 
@@ -530,10 +563,17 @@ export default function PixelPet(props: Props) {
         const loop = (t: number) => {
             const dt = Math.min(t - pet.lastT, 100)
             pet.lastT = t
-            if (pet.onScreen && !document.hidden && pet.hopStart == null)
+            // the mood clock stops while she sleeps; waking resets it
+            if (
+                pet.onScreen &&
+                !document.hidden &&
+                pet.hopStart == null &&
+                !pet.asleep
+            )
                 pet.lonely += dt
-            const mood =
-                pet.lonely >= SULK_AFTER
+            const mood = pet.asleep
+                ? null
+                : pet.lonely >= SULK_AFTER
                     ? "sulk"
                     : pet.lonely >= SNUB_AFTER
                       ? "snub"
@@ -543,12 +583,13 @@ export default function PixelPet(props: Props) {
                 pet.blinkUntil = t + 130
                 pet.nextBlink = t + 2200 + Math.random() * 2400
             }
-            // no fidgeting while she's in a mood
+            // no fidgeting while she's in a mood or asleep
             if (
                 t > pet.nextMicro &&
                 pet.hopStart == null &&
                 t > pet.microUntil &&
-                !mood
+                !mood &&
+                !pet.asleep
             ) {
                 if (Math.random() < 0.35) {
                     pet.micro = "tap"
@@ -575,24 +616,35 @@ export default function PixelPet(props: Props) {
                 }
             }
 
-            const breath = Math.sin(t / 1100)
-            const oyPx = OY + Math.round(breath * 2) + hopPx
+            // asleep, she breathes slower and deeper: the ~6.9s cycle
+            const breath = pet.asleep
+                ? Math.sin(((t - pet.sleptAt) / 1100) * 0.32)
+                : Math.sin(t / 1100)
+            const oyPx =
+                OY + Math.round(breath * (pet.asleep ? 3 : 2)) + hopPx
 
             const active = t < pet.microUntil ? pet.micro : null
-            const blink = t < pet.blinkUntil
+            // waking: two quick blinks before her eyes open
+            const sinceWake = t - pet.wokeAt
+            const wakeBlink =
+                (sinceWake > 0 && sinceWake < 180) ||
+                (sinceWake > 420 && sinceWake < 560)
+            const blink = t < pet.blinkUntil || wakeBlink
             const look = active === "look" ? pet.microDir : 0
             const tap = active === "tap"
 
             ctx.clearRect(0, 0, CW, CH)
             px(0, 0, CW, CH, C.bg)
 
-            for (let i = 0; i < 5; i++)
-                px(44 + i * 26, 11, ART - 3, ART - 3, C.tdark, 0.55)
+            // status dots go dark while she sleeps
+            if (!pet.asleep)
+                for (let i = 0; i < 5; i++)
+                    px(44 + i * 26, 11, ART - 3, ART - 3, C.tdark, 0.55)
 
             px(OX + 2 * ART, OY + 12 * ART + 4, 10 * ART, 5, C.tdark, 0.22)
 
-            // the bulb dims (but keeps breathing) while she's in a mood
-            const bulb = mood
+            // the bulb dims (but keeps breathing) while she's in a mood or asleep
+            const bulb = mood || pet.asleep
                 ? BULB_DIM[breath > 0 ? 1 : 0]
                 : breath > 0
                   ? C.peribright
@@ -606,7 +658,14 @@ export default function PixelPet(props: Props) {
             }
 
             const drawEye = (baseCol: number, side: number) => {
-                if (happy) {
+                if (pet.asleep) {
+                    // closed lids; on a pet the left one lifts to a slit
+                    const peek = side < 0 && t < pet.peekUntil
+                    cell(baseCol, 5, oyPx, LID)
+                    cell(baseCol + 1, 5, oyPx, LID)
+                    cell(baseCol, 6, oyPx, peek ? C.bg : CREASE)
+                    cell(baseCol + 1, 6, oyPx, peek ? C.bg : CREASE)
+                } else if (happy) {
                     cell(baseCol, 6, oyPx, C.bg)
                     cell(baseCol + 1, 5, oyPx, C.bg)
                     cell(baseCol + 2, 6, oyPx, C.bg)
@@ -659,6 +718,23 @@ export default function PixelPet(props: Props) {
                 cell(14, 6, oyPx, C.peribright)
             }
 
+            // z's drift up and to the right, one every 3.4s, fading out
+            if (pet.asleep) {
+                const since = t - pet.sleptAt - 900
+                for (let k = 0; k < 3; k++) {
+                    const p = (since / 3400 - k / 3) % 1
+                    if (since < 0 || p < 0) continue
+                    const a = p < 0.15 ? p / 0.15 : 1 - (p - 0.15) / 0.85
+                    const zc = p > 0.45 ? 5 : 4
+                    const zx = OX + 12 * ART + Math.round(p * 14)
+                    const zy = oyPx + 16 - Math.round(p * 52)
+                    for (let r = 0; r < Z.length; r++)
+                        for (let ci = 0; ci < Z[r].length; ci++)
+                            if (Z[r][ci] === "#")
+                                px(zx + ci * zc, zy + r * zc, zc, zc, C.tlight, a * 0.9)
+                }
+            }
+
             pet.hearts = pet.hearts.filter((hh) => t - hh.born < 1250)
             for (const hh of pet.hearts) {
                 const p = (t - hh.born) / 1250
@@ -694,8 +770,12 @@ export default function PixelPet(props: Props) {
     const onPet = () => {
         const pet = petRef.current
         if (!pet) return
-        if (soundEnabled) safePlay(petSound, volume)
         const t = performance.now()
+        if (pet.asleep) {
+            pet.peekUntil = t + 900 // one sleepy eye, then back to sleep
+            return
+        }
+        if (soundEnabled) safePlay(petSound, volume)
         pet.lonely = 0
         if (pet.hopStart == null) {
             pet.hopStart = t
@@ -707,17 +787,36 @@ export default function PixelPet(props: Props) {
     }
     const onLook = (dir: number) => () => {
         const pet = petRef.current
-        if (!pet) return
+        if (!pet || pet.asleep) return
         if (soundEnabled) safePlay(lookSound, volume)
         pet.snubSide = dir // while snubbing, LOOK changes which way she turns away
         pet.micro = "look"
         pet.microDir = dir
         pet.microUntil = performance.now() + 850
     }
-    // power light: status + click power-cycles (replays the log boot, with sound)
+    // power key: OFF puts her to sleep and the terminal goes dark; ON wakes
+    // her, replays the log boot and starts her mood clock fresh
     const onPower = () => {
+        const pet = petRef.current
+        if (!pet) return
         if (soundEnabled) safePlay(powerSound, volume)
-        setBoot((b) => b + 1)
+        const t = performance.now()
+        if (!pet.asleep) {
+            pet.asleep = true
+            pet.sleptAt = t
+            pet.hopStart = null
+            pet.hearts = []
+            pet.micro = null
+            setMsg(false)
+            clearTimeout(msgTimer.current)
+        } else {
+            pet.asleep = false
+            pet.wokeAt = t
+            pet.lonely = 0
+            pet.nextMicro = t + 3800
+            setBoot((b) => b + 1)
+        }
+        setAsleep(pet.asleep)
     }
 
     // term-body children, in order, each with a staggered boot-in delay
@@ -753,7 +852,13 @@ export default function PixelPet(props: Props) {
         <div ref={wrapRef} style={{ ...props.style, fontFamily: FONT }}>
             <style>{CSS}</style>
 
-            <div className={stacked ? "pd-deck pd-stacked" : "pd-deck"}>
+            <div
+                className={
+                    "pd-deck" +
+                    (stacked ? " pd-stacked" : "") +
+                    (asleep ? " pd-asleep" : "")
+                }
+            >
                 {/* ─── Peri ─── */}
                 <div className="pd-device">
                     <div className="pd-keyring" />
@@ -766,15 +871,15 @@ export default function PixelPet(props: Props) {
                             } as CSSProperties
                         }
                     >
-                        {/* "ON" status key (click = re-run log, with sound) */}
+                        {/* power key: says what a press does (OFF while she's awake, ON while she sleeps) */}
                         <div className="pd-power-well">
                             <button
                                 type="button"
-                                title="Re-run log"
+                                title={asleep ? "Wake Peri" : "Put Peri to sleep"}
                                 className="pd-power"
                                 onClick={onPower}
                             >
-                                ON
+                                {asleep ? "ON" : "OFF"}
                             </button>
                         </div>
 
@@ -835,13 +940,18 @@ export default function PixelPet(props: Props) {
                                         }}
                                     />
                                 </div>
+                                <div className="pd-overlay pd-dim" />
                                 <div className="pd-overlay pd-scanlines" />
                                 <div className="pd-overlay pd-shade" />
                                 <div className="pd-overlay pd-glare" />
                             </div>
                         </div>
 
-                        <div className="pd-hint">tap to say hi to Peri</div>
+                        <div className="pd-hint">
+                            {asleep
+                                ? "shh… tap ON to wake her"
+                                : "tap to say hi to Peri"}
+                        </div>
 
                         <div className="pd-controls">
                             <div className="pd-control">
@@ -982,7 +1092,7 @@ export default function PixelPet(props: Props) {
                         </svg>
                     </div>
                     <div className="pd-body" key={boot}>
-                        {bodyRows}
+                        {asleep ? null : bodyRows}
                     </div>
                 </div>
             </div>
