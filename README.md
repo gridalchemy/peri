@@ -2,7 +2,9 @@
 
 > `// PERI.SYS v2.0: a pixel pet wired to a terminal. She idles, the log reports what I'm up to.`
 
-A tiny retro Tamagotchi-style desk companion. Peri is drawn pixel-by-pixel on a `<canvas>`; she breathes, blinks, looks around, and reacts when you pet her.
+A tiny retro Tamagotchi-style desk companion. Peri is drawn pixel-by-pixel on a `<canvas>`; she breathes, blinks, looks around, and reacts when you pet her. Leave her alone and she snubs, then sulks: the five dots on her screen are her mood meter. The power key puts her to sleep.
+
+Her shell has a slide on its top edge that turns it from opaque through milky and frosted to clear. Through a clear shell you see her insides: a board where every button is wired to her brain behind the screen, and each press runs along its line before she reacts.
 
 Peri is short for **periwinkle**, one of my brand colors and the inspiration for her. It's the soft blue-violet of her shell.
 
@@ -12,10 +14,10 @@ Peri is short for **periwinkle**, one of my brand colors and the inspiration for
 
 Peri lives in two forms — this repo has both, and they evolve together.
 
-- **`index.html`** — the standalone toy. One file. No build step, no dependencies, no framework. Vanilla JS + a `<canvas>` sprite grid, three buttons (`<`, `PET`, `>`), and that's the whole surface. Open it in a browser and she's there. This is what the live demo above serves.
-- **`PixelPet.framer.tsx`** — the fuller "cyberdeck" version, a Framer code component. Peri is wired by a thin teal cable to a small terminal that logs what I'm up to; `PET` and `LOOK` play sounds via [cuelume](https://github.com/Danilaa1/cuelume).
+- **`index.html`** — the standalone toy. One file. No build step, nothing to install, no framework. Vanilla JS + a `<canvas>` sprite grid: `<`, `PET` and `>`, the power key, the shell slide, and a speaker grille you can tap to mute her. Sounds come from [cuelume](https://github.com/Danilaa1/cuelume), loaded from a CDN. Open it in a browser and she's there. This is what the live demo above serves.
+- **`PixelPet.framer.tsx`** — the fuller "cyberdeck" version, a Framer code component. Peri is wired by a thin teal cable to a small terminal that logs what I'm up to.
 
-Future updates land on both.
+Future updates land on both, and they share their code: the shell's CSS and `createInsides()` are identical in the two files. Only the terminal and the cable are Framer-only.
 
 ## Run locally
 
@@ -55,7 +57,7 @@ Python, they are optional, and the toy above still has no build step and no depe
 ## Credits
 
 - Peri, art & code — [@gridalchemy](https://github.com/gridalchemy)
-- Sound in the Framer variant: [cuelume](https://github.com/Danilaa1/cuelume) by Daniel Belyi ([MIT](https://github.com/Danilaa1/cuelume/blob/main/LICENSE))
+- Sound: [cuelume](https://github.com/Danilaa1/cuelume) by Daniel Belyi ([MIT](https://github.com/Danilaa1/cuelume/blob/main/LICENSE))
 
 ## License
 
