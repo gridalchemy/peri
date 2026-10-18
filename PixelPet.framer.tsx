@@ -794,9 +794,9 @@ const CSS = `
 .pd-deck.pd-stacked .pd-terminal { width: 320px; }
 
 .pd-bio {
-    margin-top: 34px; text-align: center;
+    margin-top: 44px; text-align: center; /* clear of the deck's floor shadow */
     font-family: ${MONO}; font-size: 12px; letter-spacing: 0.3px;
-    color: #8b88a0;
+    color: #8B90A0;
 }
 `
 
@@ -1594,9 +1594,9 @@ PixelPet.defaultProps = {
     outlineColor: "#32428D",
     arrowColor: "#59AFB1",
     soundEnabled: true,
-    petSound: "sparkle",
-    lookSound: "tick",
-    powerSound: "ready",
+    petSound: "success",
+    lookSound: "press",
+    powerSound: "toggle",
     volume: 0.6,
 }
 
@@ -1632,7 +1632,7 @@ addPropertyControls(PixelPet, {
     petSound: {
         type: ControlType.Enum,
         title: "PET sound",
-        defaultValue: "sparkle",
+        defaultValue: "success",
         options: SOUND_NAMES,
         optionTitles: SOUND_NAMES.map((n) => n[0].toUpperCase() + n.slice(1)),
         hidden: (p) => !p.soundEnabled,
@@ -1640,7 +1640,7 @@ addPropertyControls(PixelPet, {
     lookSound: {
         type: ControlType.Enum,
         title: "LOOK sound",
-        defaultValue: "tick",
+        defaultValue: "press",
         options: SOUND_NAMES,
         optionTitles: SOUND_NAMES.map((n) => n[0].toUpperCase() + n.slice(1)),
         hidden: (p) => !p.soundEnabled,
@@ -1648,7 +1648,7 @@ addPropertyControls(PixelPet, {
     powerSound: {
         type: ControlType.Enum,
         title: "POWER sound",
-        defaultValue: "ready",
+        defaultValue: "toggle",
         options: SOUND_NAMES,
         optionTitles: SOUND_NAMES.map((n) => n[0].toUpperCase() + n.slice(1)),
         hidden: (p) => !p.soundEnabled,

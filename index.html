@@ -767,7 +767,8 @@ function createInsides(o) {
   // the insides are measured off the real layout, so they wait for her font
   (document.fonts ? document.fonts.load("8px 'Press Start 2P'").catch(() => {}) : Promise.resolve()).then(() => insides.build());
 
-  // ---- sound: cuelume, synthesized UI sounds; each one plays when she reacts ----
+  // ---- sound: cuelume, synthesized UI sounds, the same picks as the Framer component's defaults:
+  // PET 'success', LOOK 'press', power 'toggle', at volume 0.6; each one plays when she reacts ----
   // tapping the speaker grille mutes her (remembered per visitor); muted, a press that would have made a
   // sound makes the closed slots glint once, so the silence has a reason
   let cue = null;
@@ -800,7 +801,7 @@ function createInsides(o) {
     levelAtPet = Math.max(0, 1 - lonely / SULK_AFTER) * 5;
     refillAt = t;
     lonely = 0;
-    sound('sparkle');
+    sound('success');
     if (!muted) insides.pulse('spkOut', insides.thump); // her sound runs back down to the speaker
     if (hopStart == null) {
       hopStart = t;
@@ -813,7 +814,7 @@ function createInsides(o) {
   // while snubbing, LOOK just changes which way she turns her face away
   const look = (dir, k) => () => insides.pulse(k, () => {
     if (asleep) return;
-    sound('tick');
+    sound('press');
     snubSide = dir; micro = 'look'; microDir = dir; microUntil = performance.now() + 850;
   });
   $('btn-left').addEventListener('click', look(-1, 'left'));
@@ -822,7 +823,7 @@ function createInsides(o) {
   // power key: OFF puts her to sleep; ON wakes her and starts her mood clock fresh
   powerEl.addEventListener('click', () => insides.pulse('power', () => {
     const t = performance.now();
-    sound('ready');
+    sound('toggle');
     if (!muted) insides.thump();
     asleep = !asleep;
     if (asleep) {
