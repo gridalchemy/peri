@@ -5,5 +5,5 @@
     <path d="M 16 10.4 L 16 7.4"/>
     <path d="M 10.6 17 h 0.01 M 21.4 17 h 0.01" stroke-width="4.3"/>
   </g>
-  <circle cx="16" cy="4.6" r="2.3" fill="var(--peri-bulb, #8E94F2)"/>
+  <circle cx="16" cy="4.6" r="2.3" fill="var(--peri-bulb, #8497F3)"/>
 </svg>

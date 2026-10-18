@@ -21,7 +21,7 @@ CAP = [
 
 # her own attire first, then four borrowed palettes
 PALETTES = [
-    ('peri (default)', '#59AFB1', '#8E94F2'),
+    ('peri (default)', '#59AFB1', '#8497F3'),
     ('ember',      '#E0704A', '#F5C563'),
     ('moss',       '#6B9E78', '#D9E8A0'),
     ('slate',      '#2E3350', '#A9AEFB'),
@@ -75,12 +75,12 @@ def main():
   .wrap{max-width:940px;margin:0 auto}
   h1{font-size:24px;margin:0 0 4px;letter-spacing:-.01em}
   h2{font:600 12px/1 var(--ui);letter-spacing:.14em;text-transform:uppercase;
-    color:#8E94F2;margin:44px 0 6px}
+    color:#8497F3;margin:44px 0 6px}
   p.lede{color:#8e97bd;font-size:14px;margin:0 0 20px;max-width:64ch}
-  p.lede code{font:12px var(--mono);color:#B9BEFF}
+  p.lede code{font:12px var(--mono);color:#B2C0FF}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:18px}
   figure{margin:0;background:#11162a;border:1px solid #232a47;border-radius:14px;
-    padding:20px 16px 16px;text-align:center;color:#B9BEFF}
+    padding:20px 16px 16px;text-align:center;color:#B2C0FF}
   figure.light{background:#F4F5FB;border-color:#dcdff0;color:#1a1d2e}
   .sizes{display:flex;align-items:flex-end;justify-content:center;gap:12px;
     min-height:76px;margin-bottom:14px}

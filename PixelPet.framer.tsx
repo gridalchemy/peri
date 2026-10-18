@@ -42,8 +42,8 @@ const C = {
     teal: "#59AFB1",
     tlight: "#7FD0D2",
     tdark: "#3E8385",
-    peri: "#8E94F2",
-    peribright: "#B9BEFF",
+    peri: "#8497F3",
+    peribright: "#B2C0FF",
     heart: "#BF5E95",
 }
 
@@ -86,7 +86,7 @@ const CREASE = TONES.D.away
 const TEAR = "#C9F4F4"
 // a pixel z for sleep, drawn in finer cells than the body so it stays small
 const Z = ["####", "  # ", " #  ", "####"]
-const BULB_DIM = ["#5A60C6", "#6B71D6"]
+const BULB_DIM = ["#4E63C7", "#6074D7"]
 const filled = (r: number, c: number) =>
     r >= 0 && r < BODY.length && c >= 0 && c < BODY[r].length && BODY[r][c] !== " "
 // computed once; "bulb" is resolved per frame because it breathes
@@ -888,7 +888,7 @@ export default function PixelPet(props: Props) {
                 matRef.current = i
                 setMat(i)
             },
-            led: { on: C.peri, bright: C.peribright, dim: BULB_DIM[0], off: "#3B3F8C" },
+            led: { on: C.peri, bright: C.peribright, dim: BULB_DIM[0], off: "#32428D" },
         })
         insidesRef.current = insides
         // the insides are measured off the real layout, so they wait for her font (and redo it if it lands late)

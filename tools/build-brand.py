@@ -19,7 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(os.path.dirname(HERE), 'brand')
 
 # ---------------------------------------------------------------- her colours
-TEAL, PERI = '#59AFB1', '#8E94F2'
+TEAL, PERI = '#59AFB1', '#8497F3'
 BODY_VAR = 'var(--peri-body, %s)' % TEAL
 BULB_VAR = 'var(--peri-bulb, %s)' % PERI
 
@@ -124,9 +124,9 @@ files['peri-pixel-outline.svg'] = svg(
 files['peri-badge.svg'] = svg(
     '  <defs>\n'
     '    <linearGradient id="peri-shell" x1="0.3" y1="0" x2="0.75" y2="1">\n'
-    '      <stop offset="0" stop-color="var(--peri-tile-light, #A9AEFB)"/>\n'
-    '      <stop offset="0.5" stop-color="var(--peri-tile, #8E94F2)"/>\n'
-    '      <stop offset="1" stop-color="var(--peri-tile-dark, #6A70CE)"/>\n'
+    '      <stop offset="0" stop-color="var(--peri-tile-light, #A1B1FC)"/>\n'
+    '      <stop offset="0.5" stop-color="var(--peri-tile, #8497F3)"/>\n'
+    '      <stop offset="1" stop-color="var(--peri-tile-dark, #6073CF)"/>\n'
     '    </linearGradient>\n'
     '  </defs>\n'
     '  <rect width="48" height="48" rx="12" fill="url(#peri-shell)"/>\n'
