@@ -478,7 +478,7 @@ const CSS = `
 .pd-keyring {
     position: absolute; top: -24px; left: 50%; transform: translateX(-50%);
     width: 52px; height: 56px;
-    border: 8px solid #A8538A; border-radius: 50% 50% 40% 40%;
+    border: 8px solid #AB5284; border-radius: 50% 50% 40% 40%;
     box-shadow: inset 2px 2px 0 rgba(255,255,255,0.22), inset -2px -1px 0 rgba(0,0,0,0.25), 0 2px 0 #6E3354;
 }
 
@@ -765,7 +765,7 @@ const CSS = `
 }
 .pd-toolbar {
     display: flex; align-items: center; padding: 12px 16px;
-    background: #0a0d18; color: #D1CEDF;
+    background: #0a0d18; color: #D8DBE8;
     border-bottom: 1px solid rgba(89,175,177,0.1);
 }
 .pd-body { padding: 20px 20px 24px; background: #12162a; min-height: 240px; font-size: 14px; line-height: 1.7; }
@@ -774,7 +774,7 @@ const CSS = `
 .pd-path { color: ${C.teal}; }
 .pd-cmd { color: #FAFAFC; }
 .pd-row { display: grid; grid-template-columns: 100px 1fr; gap: 8px; padding: 2px 0; }
-.pd-k { color: #8b88a0; }
+.pd-k { color: #8B90A0; }
 .pd-v { color: #FAFAFC; }
 .pd-caret {
     display: inline-block; width: 8px; height: 16px; background: ${C.teal};
