@@ -4,7 +4,11 @@
 //
 // The shell, its clear versions and the insides are shared with index.html: the CSS block marked
 // "Shared with index.html" and createInsides() below are identical in both, keep them that way.
-// Only the terminal and the cable are Framer-only.
+// Only the terminal, the cable and the front door are Framer-only.
+//
+// Front door: the same component with "Front door" set to Yes, placed on Home. On the live site (and in
+// Preview) Peri covers the whole window until a visitor taps her screen; then her screen shows the page
+// and the camera pushes through the glass onto it. In the editor it shows as a small placeholder card.
 //
 // Sound: uses `cuelume` (MIT) — synthesized Web Audio UI sounds, no files.
 // Loaded from the esm.sh CDN because Framer's package manager can't resolve a
@@ -18,7 +22,8 @@ import {
     type CSSProperties,
     type ReactNode,
 } from "react"
-import { addPropertyControls, ControlType } from "framer"
+import { createPortal } from "react-dom"
+import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { play } from "https://esm.sh/cuelume@0.2.2"
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -174,7 +179,7 @@ const botPt = (deg: number, d: number, side: number): number[] => {
 const tangentDeg = (a: number): number => (Math.atan2(-258 * Math.cos((a * Math.PI) / 180), -179 * Math.sin((a * Math.PI) / 180)) * 180) / Math.PI
 
 // o: { uid, shell, guts, surface, front, slide, slideKey, bezel, powerWell, port (optional), grille, left, pet, right,
-//      isClear(), matIndex(), onPick(index), led: { on, bright, dim, off } }
+//      isClear(), matIndex(), onPick(index), led: { on, bright, dim, off }, noButtons() (optional) }
 function createInsides(o: any): any {
     const id = (n: string): string => `${o.uid}-${n}`
     const el = (tag: string, attrs: any, parent?: any): any => {
@@ -205,6 +210,8 @@ function createInsides(o: any): any {
             return { cx: b.cx, cy: b.y - 6 + (big ? 35 : 33), rx: big ? 34 : 32, ry: big ? 35 : 33 }
         }
         const L = btn(o.left), P = btn(o.pet), R = btn(o.right)
+        // a Peri without buttons (the portfolio's front door) has no contacts, lines or holes for them
+        const keys: any[] = o.noButtons && o.noButtons() ? [] : [[L, "left"], [P, "pet"], [R, "right"]]
 
         const defs = el("defs", {}, guts)
         // the glow's region is the whole shell: sized to each pulse's own box, a perfectly straight line
@@ -243,6 +250,7 @@ function createInsides(o: any): any {
             cell: `M ${SH_W - pw.cx + 17} ${pw.cy} H ${bz.x + 20}`,
         }
         if (port) traces.port = `M ${port.x - 4} ${port.cy + 7} H ${pw.r - 5}` // tucks under the power key
+        if (!keys.length) { delete traces.left; delete traces.pet; delete traces.right }
         for (const k in traces) el("path", { d: traces[k], class: "pd-g-trace" }, bg)
         traces.spkOut = `M ${sx - 2.5} ${under} V ${gr.y + 4}` // her sound, from the brain down to the speaker
 
@@ -251,7 +259,7 @@ function createInsides(o: any): any {
             el("circle", { cx: x, cy: y, r: 1.8, fill: "var(--pcb)", stroke: "var(--pad)", "stroke-width": 1 }, bg)
 
         // button contacts: a tinned ring with the comb pattern a rubber dome closes
-        for (const b of [L, P, R]) {
+        for (const [b] of keys) {
             el("ellipse", { cx: b.cx, cy: b.cy, rx: b.rx - 3, ry: b.ry - 3, class: "pd-g-pad" }, bg)
             for (const k of [6, 11, 16]) el("ellipse", { cx: b.cx, cy: b.cy, rx: b.rx - 3 - k, ry: b.ry - 3 - k, class: "pd-g-ring" }, bg)
         }
@@ -287,11 +295,11 @@ function createInsides(o: any): any {
         led = el("rect", { x: pw.cx - 3, y: ly - 3.5, width: 6, height: 7, rx: 1, fill: o.led.on }, bg)
 
         // pulses ride on copies of the lines; a press first lights the contact's ring
-        for (const k of ["left", "pet", "right", "power", "spkOut"]) {
+        for (const k of [...keys.map((x: any) => x[1]), "power", "spkOut"]) {
             const p = el("path", { d: traces[k], class: "pd-g-pulse", filter: `url(#${id("glow")})` }, bg)
             pulses[k] = { el: p, len: p.getTotalLength() }
         }
-        for (const [b, k] of [[L, "left"], [P, "pet"], [R, "right"]])
+        for (const [b, k] of keys)
             pulses[k].flash = el("ellipse", { cx: b.cx, cy: b.cy, rx: b.rx - 4, ry: b.ry - 4, class: "pd-g-pulse", filter: `url(#${id("glow")})` }, bg)
         pulses.power.flash = el("rect", { x: pw.x + 2, y: pw.y + 2, width: pw.w - 4, height: pw.h - 4, rx: 5, class: "pd-g-pulse", filter: `url(#${id("glow")})` }, bg)
 
@@ -305,7 +313,7 @@ function createInsides(o: any): any {
 
         // ---- the front wall's mask: white is plastic, black is a hole ----
         const holes =
-            [L, P, R].map((b: any) => `<ellipse cx="${b.cx}" cy="${b.cy}" rx="${b.rx - 0.5}" ry="${b.ry - 0.5}" fill="black"/>`).join("") +
+            keys.map(([b]: any) => `<ellipse cx="${b.cx}" cy="${b.cy}" rx="${b.rx - 0.5}" ry="${b.ry - 0.5}" fill="black"/>`).join("") +
             `<rect x="${pw.x}" y="${pw.y}" width="${pw.w}" height="${pw.h}" rx="7" fill="black"/>` +
             Array.from(o.grille.children).map((i: any) => { const r = box(i); return `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="2" fill="black"/>` }).join("")
         const mask = `<svg xmlns="${SVG_NS}" viewBox="0 0 ${SH_W} ${SH_H}" width="${SH_W}" height="${SH_H}"><rect width="${SH_W}" height="${SH_H}" fill="white"/>${holes}</svg>`
@@ -437,6 +445,7 @@ interface PetState {
     peekUntil: number // a pet while she sleeps opens one eye for a moment
     refillAt: number // the mood meter refills from where it was, left to right, after a pet
     levelAtPet: number
+    smileUntil: number // front door: her HAPPY still (the hop's eyes, mouth closed) as she lets you in
 }
 
 interface Props {
@@ -450,7 +459,21 @@ interface Props {
     lookSound: SoundName
     powerSound: SoundName
     volume: number
+    frontDoor: boolean
+    doorShows: "once" | "always"
 }
+
+const pause = (ms: number) => new Promise<void>((done) => setTimeout(done, ms))
+// the push: scale grows exponentially (each frame zooms by the same ratio, the way a camera move reads),
+// eased in and out
+const easeQuart = (p: number) => (p < 0.5 ? 8 * p ** 4 : 1 - (-2 * p + 2) ** 4 / 2)
+const PUSH_MS = 1300
+// Styles are written into the page raw (dangerouslySetInnerHTML): rendered as text on Framer's server, React
+// escapes their quotes, and inside a <style> tag `&quot;` is read literally, so a rule like content: "" breaks
+// until the scripts load
+const COVER_CSS = `body::after { content: ""; position: fixed; inset: 0; z-index: 2147483646; background: #050810; }`
+// how far into the push the live page starts taking over (the copy is ~1% from its final size by then)
+const HANDOVER_AT = 0.84
 
 // scoped CSS. All classes prefixed `pd-` so nothing leaks into the host page.
 const CSS = `
@@ -798,15 +821,58 @@ const CSS = `
     font-family: ${MONO}; font-size: 12px; letter-spacing: 0.3px;
     color: #8B90A0;
 }
+
+/* ===== Front door (Framer only): Peri alone on the page until a tap on her screen lets you in ===== */
+/* the scrollbar's space is kept while scrolling is locked, so the page doesn't shift when she lets you in */
+html.pd-door-lock { scrollbar-gutter: stable; }
+html.pd-door-lock, html.pd-door-lock body { overflow: hidden; }
+.pd-door { position: fixed; inset: 0; z-index: 9999; background: #050810; overflow: hidden; }
+.pd-door-stage {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 50% 42%, rgba(89,175,177,0.14), rgba(5,8,16,0) 62%), #050810;
+}
+/* she shrinks to fit small windows; the push measures what is on screen, so it follows */
+.pd-door-deck { transform: scale(var(--fit, 1)); }
+.pd-door.pd-going .pd-device { pointer-events: none; }
+/* no PET or LOOK at the door: the screen is the one way in. Their wells keep their place in the layout,
+   unseen, and the caption moves into it with a pixel arrow up at the screen that rises with her breath */
+.pd-door .pd-control, .pd-door .pd-hint { visibility: hidden; }
+.pd-door .pd-controls { position: relative; }
+.pd-door-label {
+    position: absolute; inset: 0; transform: translateY(-12px); pointer-events: none;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px;
+}
+.pd-door-label span { color: #1B2345; font-size: 10px; letter-spacing: 1px; white-space: nowrap; text-shadow: 0 1px 0 rgba(255,255,255,0.3); }
+.pd-door-label i {
+    width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 7px solid #1B2345;
+    filter: drop-shadow(0 1px 0 rgba(255,255,255,0.3)); transform: translateY(calc(var(--b01, 0.5) * -3px));
+}
+/* on a see-through shell the caption is printed over the board, so it takes the light ink */
+.pd-clear .pd-door-label span { color: #E2E7FF; opacity: .85; text-shadow: 0 1px 0 rgba(9,12,24,0.6); }
+.pd-clear .pd-door-label i { border-bottom-color: #E2E7FF; opacity: .85; filter: drop-shadow(0 1px 0 rgba(9,12,24,0.6)); }
+/* the glass is the button. --g is the glow's strength: it rises on hover or keyboard focus, and on touch
+   screens, which have no hover, it breathes with her bulb (--b01 follows her breath) */
+@property --pd-hov { syntax: '<number>'; inherits: true; initial-value: 0; }
+.pd-door .pd-lcd {
+    --gb: 0.22; --ga: 0.26; transition: --pd-hov .25s ease;
+    --g: calc(var(--gb) + var(--ga) * var(--b01, 0.5) + 0.62 * var(--pd-hov));
+    box-shadow: 0 0 0 2px #090C18, 0 1px 0 2px rgba(255,255,255,0.08),
+        0 0 0 3px rgba(127,208,210, calc(var(--g) * 0.75)),
+        0 0 24px 5px rgba(89,175,177, calc(var(--g) * 0.6));
+}
+@media (hover: hover) { .pd-door .pd-lcd { --gb: 0; --ga: 0; } }
+.pd-door .pd-lcd:has(.pd-door-screen:hover), .pd-door .pd-lcd:has(.pd-door-screen:focus-visible) { --pd-hov: 1; }
+.pd-door-screen {
+    position: absolute; inset: 0; z-index: 2; border: 0; padding: 0; margin: 0; background: transparent;
+    cursor: pointer; border-radius: 4px; outline: none;
+    box-shadow: inset 0 0 0 1px rgba(127,208,210, calc(var(--g) * 0.55)), inset 0 0 30px rgba(127,208,210, calc(var(--g) * 0.22));
+}
+/* the page drawn small on her screen for the push: sized to the window, scaled down to the glass */
+.pd-door-clone { position: absolute; left: 50%; top: 50%; overflow: hidden; pointer-events: none; transform-origin: 50% 50%; }
 `
 
-/**
- * @framerSupportedLayoutWidth any
- * @framerSupportedLayoutHeight auto
- * @framerIntrinsicWidth 796
- * @framerIntrinsicHeight 620
- */
-export default function PixelPet(props: Props) {
+// Peri herself: the deck with the terminal (About), or, given `door`, the front door's device on its own
+function Peri(props: Props & { door?: { onDone: () => void; page: () => HTMLElement | null } }) {
     const {
         message,
         shellColor,
@@ -843,6 +909,12 @@ export default function PixelPet(props: Props) {
     }
     // per-instance prefix for the cable's SVG ids, so two Peris on one page don't share them
     const uid = "pd" + useId().replace(/:/g, "")
+    // front door
+    const door = props.door
+    const doorRef = useRef<HTMLDivElement>(null)
+    const stageRef = useRef<HTMLDivElement>(null)
+    const lcdRef = useRef<HTMLDivElement>(null)
+    const doorRun = useRef({ entering: false, anims: [] as Animation[], clone: null as HTMLElement | null })
 
     // Responsive by the component's OWN width (works with Framer's sizing /
     // breakpoints), stacking Peri above the terminal when it gets narrow.
@@ -889,6 +961,7 @@ export default function PixelPet(props: Props) {
                 setMat(i)
             },
             led: { on: C.peri, bright: C.peribright, dim: BULB_DIM[0], off: "#32428D" },
+            noButtons: () => !!door,
         })
         insidesRef.current = insides
         // the insides are measured off the real layout, so they wait for her font (and redo it if it lands late)
@@ -938,6 +1011,7 @@ export default function PixelPet(props: Props) {
             peekUntil: 0,
             refillAt: -1e9,
             levelAtPet: 5,
+            smileUntil: 0,
         }
         petRef.current = pet
 
@@ -1025,6 +1099,7 @@ export default function PixelPet(props: Props) {
                     mouthOpen = true
                 }
             }
+            if (t < pet.smileUntil) happy = true
 
             // asleep, she breathes slower and deeper: the ~6.9s cycle
             const breath = pet.asleep
@@ -1032,6 +1107,8 @@ export default function PixelPet(props: Props) {
                 : Math.sin(t / 1100)
             const oyPx =
                 OY + Math.round(breath * (pet.asleep ? 3 : 2)) + hopPx
+            // front door: the caption's arrow and the touch-screen glow follow her breath
+            doorRef.current?.style.setProperty("--b01", (breath * 0.5 + 0.5).toFixed(3))
 
             const active = t < pet.microUntil ? pet.micro : null
             // waking: two quick blinks before her eyes open
@@ -1272,6 +1349,175 @@ export default function PixelPet(props: Props) {
             setAsleep(pet.asleep)
         })
 
+    // ---- front door ----
+    // While the door is up the page underneath is scrolled to the top, can't scroll and can't be tabbed
+    // into; Esc skips the door.
+    useEffect(() => {
+        if (!door) return
+        const html = document.documentElement
+        const main = door.page() as any
+        // the browser would otherwise restore an earlier scroll position under the door after a reload
+        const restoration = history.scrollRestoration
+        history.scrollRestoration = "manual"
+        window.scrollTo(0, 0)
+        html.classList.add("pd-door-lock")
+        if (main) main.inert = true
+        const fit = () =>
+            doorRef.current?.style.setProperty("--fit", Math.min(1, (window.innerWidth - 32) / 358, (window.innerHeight - 40) / 540).toFixed(3))
+        fit()
+        window.addEventListener("resize", fit)
+        const onKey = (e: KeyboardEvent) => {
+            const run = doorRun.current
+            if (e.key !== "Escape" || run.entering || !doorRef.current) return
+            run.entering = true
+            const a = doorRef.current.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, fill: "both" })
+            run.anims.push(a)
+            a.finished.then(door.onDone, door.onDone)
+        }
+        window.addEventListener("keydown", onKey)
+        return () => {
+            history.scrollRestoration = restoration
+            html.classList.remove("pd-door-lock")
+            if (main) main.inert = false
+            window.removeEventListener("resize", fit)
+            window.removeEventListener("keydown", onKey)
+            doorRun.current.anims.forEach((a) => a.cancel())
+            doorRun.current.clone?.remove()
+            doorRun.current.clone = null
+        }
+    }, [])
+
+    // a tap on her screen: she smiles, the page appears on her screen, and the camera pushes through the
+    // glass until her screen is the page
+    const enter = async () => {
+        const run = doorRun.current
+        const pet = petRef.current
+        if (!door || run.entering || !pet) return
+        run.entering = true
+        doorRef.current?.classList.add("pd-going")
+        pet.lonely = 0 // you came in: whatever mood she was in, it's over
+        if (pet.asleep) {
+            pet.asleep = false
+            setAsleep(false)
+        }
+        pet.smileUntil = performance.now() + 4000
+        await pause(450)
+        const el = doorRef.current, stage = stageRef.current, lcd = lcdRef.current
+        if (!el || !stage || !lcd) return door.onDone()
+        const keep = (a: Animation) => (run.anims.push(a), a)
+        window.scrollTo(0, 0)
+
+        // the page as it is laid out under the door, measured off the page itself: with the scrollbar's space
+        // kept, the window reports itself wider than the page really is
+        const main = door.page()
+        const page = main?.getBoundingClientRect()
+        const w = page ? page.width : document.documentElement.clientWidth, h = window.innerHeight
+        const left = page ? page.left : 0
+
+        // the push is a camera dolly: everything scales about one fixed point, chosen so her screen ends
+        // centred on the page and overfilling the whole window by 6%, so the glass's corners and rim stay outside
+        const box = lcd.getBoundingClientRect()
+        const cx = box.left + box.width / 2, cy = box.top + box.height / 2
+        const S = Math.max(window.innerWidth / box.width, h / box.height) * 1.06
+        // on a small window she is shrunk to fit; the copy sits inside that shrink, so it undoes it too
+        const fit = box.width / (lcd.offsetWidth || box.width)
+        const tx = left + w / 2, ty = h / 2
+        const fx = (tx - S * cx) / (1 - S), fy = (ty - S * cy) / (1 - S)
+
+        // the page, drawn small on her screen: a copy the size of the page's window and scaled down by the
+        // push's own factor, so when the push lands it sits exactly over the real page
+        let finalSync = () => {}
+        if (main) {
+            const clone = main.cloneNode(true) as HTMLElement
+            const body = getComputedStyle(document.body)
+            const bg = body.backgroundColor === "rgba(0, 0, 0, 0)" || body.backgroundColor === "transparent" ? C.bg : body.backgroundColor
+            clone.classList.add("pd-door-clone")
+            clone.setAttribute("aria-hidden", "true")
+            Object.assign(clone.style, {
+                width: w + "px", height: h + "px", transform: `translate(-50%, -50%) scale(${1 / (S * fit)})`,
+                // the page's background usually sits on <body>, outside the copy, so the copy carries it; where
+                // her screen and the window differ in shape, it fills the rest of the glass too
+                background: bg,
+                boxShadow: `0 0 0 ${Math.ceil(window.innerWidth)}px ${bg}`,
+                // the copy sits inside Peri, whose pixel font would otherwise pass down to any text that
+                // doesn't set its own; nothing else she sets is inherited
+                fontFamily: body.fontFamily,
+            })
+            lcd.insertBefore(clone, lcd.children[1] || null)
+            run.clone = clone
+            // the copy is a still of a page that keeps moving underneath. CSS animations start over in a copy,
+            // so each is set to where the page's own one is; anything moved from script (the ruler's bob,
+            // Framer's appear effects) is mirrored onto the copy every frame until the hand-over
+            const src = main.querySelectorAll<HTMLElement>("*"), dst = clone.querySelectorAll<HTMLElement>("*")
+            const cssAnims = (x: Element) => x.getAnimations().filter((a): a is CSSAnimation => a instanceof CSSAnimation)
+            const live: [HTMLElement, HTMLElement][] = []
+            src.forEach((n, i) => {
+                const d = dst[i]
+                if (!d) return
+                const theirs = cssAnims(d)
+                cssAnims(n).forEach((a) => {
+                    const t = theirs.find((b) => b.animationName === a.animationName)
+                    if (t && a.currentTime != null) t.currentTime = a.currentTime
+                })
+                if (/transform|opacity/.test(n.getAttribute("style") || "") || n.getAnimations().some((a) => !(a instanceof CSSAnimation)))
+                    live.push([n, d])
+            })
+            const mirror = () => {
+                for (const [n, d] of live) {
+                    const cs = getComputedStyle(n)
+                    d.style.transform = cs.transform
+                    d.style.opacity = cs.opacity
+                }
+            }
+            const follow = () => {
+                if (run.clone !== clone) return
+                mirror()
+                requestAnimationFrame(follow)
+            }
+            follow()
+            // and just before the hand-over, any text that changed too (a clock ticking over)
+            finalSync = () => {
+                mirror()
+                src.forEach((n, i) => {
+                    const d = dst[i]
+                    if (d && !n.children.length && d.textContent !== n.textContent) d.textContent = n.textContent
+                })
+            }
+            // a CRT switching over: a bright flash that settles (and leaves no filter behind, which would make
+            // the copy costlier to draw at full size)
+            keep(clone.animate([{ opacity: 0, filter: "brightness(2.4)" }, { opacity: 1, filter: "brightness(1)" }], { duration: 320, fill: "backwards" }))
+            if (canvasRef.current) keep(canvasRef.current.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 320, fill: "both" }))
+            await pause(380)
+        }
+
+        stage.style.transformOrigin = `${fx}px ${fy}px`
+        const frames = Array.from({ length: 61 }, (_, i) => ({ transform: `scale(${S ** easeQuart(i / 60)})` }))
+        const push = keep(stage.animate(frames, { duration: PUSH_MS, easing: "linear", fill: "both" }))
+        if (main) {
+            // scanlines and the glass's shading would grow into bands across the page, so they clear
+            lcd.querySelectorAll(".pd-scanlines, .pd-shade, .pd-glare").forEach((g) =>
+                keep(g.animate([{ opacity: 1 }, { opacity: 0 }], { duration: PUSH_MS * 0.5, delay: PUSH_MS * 0.35, fill: "both" }))
+            )
+        } else {
+            // no page to copy: her screen fills the window dark, then the page fades in
+            keep(el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: PUSH_MS * 0.45, delay: PUSH_MS * 0.62, fill: "both" }))
+        }
+        try {
+            if (main) {
+                // the live page takes over during the push's last stretch, while it is still gliding in: by then
+                // the copy is within a few pixels of the page, so the crossfade can't be seen, and it is the
+                // real, sharp page that finishes the move instead of a still copy coming to rest
+                await pause(PUSH_MS * HANDOVER_AT)
+                finalSync()
+                keep(el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: PUSH_MS * (0.98 - HANDOVER_AT), fill: "both" }))
+            }
+            await push.finished
+        } catch {
+            /* cancelled: the door is going anyway */
+        }
+        door.onDone()
+    }
+
     // term-body children, in order, each with a staggered boot-in delay
     const step = 55
     const bodyRows: ReactNode[] = [
@@ -1301,17 +1547,8 @@ export default function PixelPet(props: Props) {
         </div>,
     ]
 
-    return (
-        <div ref={wrapRef} style={{ ...props.style, fontFamily: FONT }}>
-            <style>{CSS}</style>
-
-            <div
-                className={
-                    "pd-deck" +
-                    (stacked ? " pd-stacked" : "") +
-                    (asleep ? " pd-asleep" : "")
-                }
-            >
+    const device = (
+        <>
                 {/* ─── Peri ─── */}
                 <div
                     ref={r.device}
@@ -1361,12 +1598,12 @@ export default function PixelPet(props: Props) {
                             </button>
                         </div>
 
-                        <div ref={r.port} className="pd-port" aria-hidden="true" />
+                        {door ? null : <div ref={r.port} className="pd-port" aria-hidden="true" />}
 
                         <div className="pd-wordmark">PERI</div>
 
                         <div ref={r.bezel} className="pd-bezel">
-                            <div className="pd-lcd">
+                            <div ref={lcdRef} className="pd-lcd">
                                 <canvas
                                     ref={canvasRef}
                                     width={CW}
@@ -1422,6 +1659,15 @@ export default function PixelPet(props: Props) {
                                 <div className="pd-overlay pd-scanlines" />
                                 <div className="pd-overlay pd-shade" />
                                 <div className="pd-overlay pd-glare" />
+                                {door ? (
+                                    <button
+                                        type="button"
+                                        className="pd-door-screen"
+                                        aria-label="Enter the portfolio"
+                                        title="Come in"
+                                        onClick={enter}
+                                    />
+                                ) : null}
                             </div>
                         </div>
 
@@ -1432,6 +1678,12 @@ export default function PixelPet(props: Props) {
                         </div>
 
                         <div className="pd-controls">
+                            {door ? (
+                                <div className="pd-door-label" aria-hidden="true">
+                                    <i />
+                                    <span>tap her screen to come in</span>
+                                </div>
+                            ) : null}
                             <div className="pd-control">
                                 <button
                                     ref={r.left}
@@ -1491,7 +1743,38 @@ export default function PixelPet(props: Props) {
                         </div>
                     </div>
                 </div>
+        </>
+    )
 
+    if (door) {
+        return (
+            <div
+                ref={doorRef}
+                className="pd-door"
+                role="region"
+                aria-label="Peri, the way in"
+                style={{ fontFamily: FONT }}
+            >
+                <style dangerouslySetInnerHTML={{ __html: CSS }} />
+                <div ref={stageRef} className="pd-door-stage">
+                    <div className={"pd-deck pd-door-deck" + (asleep ? " pd-asleep" : "")}>{device}</div>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <div ref={wrapRef} style={{ ...props.style, fontFamily: FONT }}>
+            <style dangerouslySetInnerHTML={{ __html: CSS }} />
+
+            <div
+                className={
+                    "pd-deck" +
+                    (stacked ? " pd-stacked" : "") +
+                    (asleep ? " pd-asleep" : "")
+                }
+            >
+                {device}
                 {/* plug parts shared by both cables. Its own zero-size svg, never
                     display:none, because gradients inside a hidden svg don't render
                     and the horizontal cable is hidden when stacked. */}
@@ -1588,6 +1871,80 @@ export default function PixelPet(props: Props) {
     )
 }
 
+/**
+ * @framerSupportedLayoutWidth any
+ * @framerSupportedLayoutHeight auto
+ * @framerIntrinsicWidth 796
+ * @framerIntrinsicHeight 620
+ */
+export default function PixelPet(props: Props) {
+    return props.frontDoor ? <FrontDoor {...props} /> : <Peri {...props} />
+}
+
+// The front door covers the window from the very first paint (the dark cover is in the page's HTML before
+// any script runs), then hands over to Peri, drawn at the top of the page above everything else. "Once per
+// visit" is remembered for the browser tab, so going back to Home doesn't show it again.
+function FrontDoor(props: Props) {
+    const target = RenderTarget.current()
+    const inEditor = target === RenderTarget.canvas || target === RenderTarget.thumbnail
+    const [phase, setPhase] = useState<"cover" | "door" | "done">("cover")
+    const markRef = useRef<HTMLSpanElement>(null)
+    useEffect(() => {
+        if (inEditor) return
+        let seen = false
+        try {
+            seen = sessionStorage.getItem("peri-door-seen") === "1"
+        } catch {
+            /* storage can be blocked; then she shows every time */
+        }
+        setPhase(props.doorShows === "once" && seen ? "done" : "door")
+    }, [])
+    const onDone = () => {
+        try {
+            sessionStorage.setItem("peri-door-seen", "1")
+        } catch {
+            /* fine: it just won't be remembered */
+        }
+        setPhase("done")
+    }
+
+    // in the editor: a small card, so Home stays editable
+    if (inEditor)
+        return (
+            <div
+                style={{
+                    ...props.style,
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10,
+                    padding: 16, boxSizing: "border-box", textAlign: "center",
+                    background: "#0a0d18", border: "1px dashed rgba(89,175,177,0.45)", borderRadius: 12,
+                }}
+            >
+                <div style={{ fontFamily: FONT, fontSize: 10, letterSpacing: 2, color: C.teal }}>PERI · FRONT DOOR</div>
+                <div style={{ fontFamily: MONO, fontSize: 12, color: "#8B90A0" }}>
+                    Shows in Preview and on the live site
+                </div>
+            </div>
+        )
+    if (phase === "done") return null
+    // the first cover is a rule on <body>, not an element: Framer wraps the layer in a transformed container,
+    // and a fixed element inside one only covers that container, which let the nav show for a split second
+    if (phase === "cover")
+        return <style dangerouslySetInnerHTML={{ __html: COVER_CSS }} />
+    // Peri is drawn outside the page, so a hidden marker stays where the layer is placed: the page is the
+    // marker's top-level container, whatever Framer calls it (#main on the live site, something else in Preview)
+    const page = () => {
+        let n: HTMLElement | null = markRef.current
+        while (n && n.parentElement && n.parentElement !== document.body) n = n.parentElement
+        return n && n !== markRef.current && n.parentElement === document.body ? n : document.getElementById("main")
+    }
+    return (
+        <>
+            <span ref={markRef} hidden />
+            {createPortal(<Peri {...props} door={{ onDone, page }} />, document.body)}
+        </>
+    )
+}
+
 PixelPet.defaultProps = {
     message: "THX FOR\nVISITING!",
     shellColor: "#8497F3",
@@ -1598,14 +1955,32 @@ PixelPet.defaultProps = {
     lookSound: "press",
     powerSound: "toggle",
     volume: 0.6,
+    frontDoor: false,
+    doorShows: "once",
 }
 
 addPropertyControls(PixelPet, {
+    frontDoor: {
+        type: ControlType.Boolean,
+        title: "Front door",
+        defaultValue: false,
+        enabledTitle: "Yes",
+        disabledTitle: "No",
+    },
+    doorShows: {
+        type: ControlType.Enum,
+        title: "Shows",
+        defaultValue: "once",
+        options: ["once", "always"],
+        optionTitles: ["Once per visit", "Every load"],
+        hidden: (p) => !p.frontDoor,
+    },
     message: {
         type: ControlType.String,
         title: "Message",
         defaultValue: "THX FOR\nVISITING!",
         displayTextArea: true,
+        hidden: (p) => p.frontDoor,
     },
     shellColor: {
         type: ControlType.Color,
@@ -1621,6 +1996,7 @@ addPropertyControls(PixelPet, {
         type: ControlType.Color,
         title: "Prompt arrow",
         defaultValue: "#59AFB1",
+        hidden: (p) => p.frontDoor,
     },
     soundEnabled: {
         type: ControlType.Boolean,
@@ -1635,7 +2011,7 @@ addPropertyControls(PixelPet, {
         defaultValue: "success",
         options: SOUND_NAMES,
         optionTitles: SOUND_NAMES.map((n) => n[0].toUpperCase() + n.slice(1)),
-        hidden: (p) => !p.soundEnabled,
+        hidden: (p) => !p.soundEnabled || p.frontDoor,
     },
     lookSound: {
         type: ControlType.Enum,
@@ -1643,7 +2019,7 @@ addPropertyControls(PixelPet, {
         defaultValue: "press",
         options: SOUND_NAMES,
         optionTitles: SOUND_NAMES.map((n) => n[0].toUpperCase() + n.slice(1)),
-        hidden: (p) => !p.soundEnabled,
+        hidden: (p) => !p.soundEnabled || p.frontDoor,
     },
     powerSound: {
         type: ControlType.Enum,

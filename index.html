@@ -419,7 +419,7 @@ const botPt = (deg, d, side) => {
 const tangentDeg = (a) => (Math.atan2(-258 * Math.cos((a * Math.PI) / 180), -179 * Math.sin((a * Math.PI) / 180)) * 180) / Math.PI
 
 // o: { uid, shell, guts, surface, front, slide, slideKey, bezel, powerWell, port (optional), grille, left, pet, right,
-//      isClear(), matIndex(), onPick(index), led: { on, bright, dim, off } }
+//      isClear(), matIndex(), onPick(index), led: { on, bright, dim, off }, noButtons() (optional) }
 function createInsides(o) {
     const id = (n) => `${o.uid}-${n}`
     const el = (tag, attrs, parent) => {
@@ -450,6 +450,8 @@ function createInsides(o) {
             return { cx: b.cx, cy: b.y - 6 + (big ? 35 : 33), rx: big ? 34 : 32, ry: big ? 35 : 33 }
         }
         const L = btn(o.left), P = btn(o.pet), R = btn(o.right)
+        // a Peri without buttons (the portfolio's front door) has no contacts, lines or holes for them
+        const keys = o.noButtons && o.noButtons() ? [] : [[L, "left"], [P, "pet"], [R, "right"]]
 
         const defs = el("defs", {}, guts)
         // the glow's region is the whole shell: sized to each pulse's own box, a perfectly straight line
@@ -488,6 +490,7 @@ function createInsides(o) {
             cell: `M ${SH_W - pw.cx + 17} ${pw.cy} H ${bz.x + 20}`,
         }
         if (port) traces.port = `M ${port.x - 4} ${port.cy + 7} H ${pw.r - 5}` // tucks under the power key
+        if (!keys.length) { delete traces.left; delete traces.pet; delete traces.right }
         for (const k in traces) el("path", { d: traces[k], class: "pd-g-trace" }, bg)
         traces.spkOut = `M ${sx - 2.5} ${under} V ${gr.y + 4}` // her sound, from the brain down to the speaker
 
@@ -496,7 +499,7 @@ function createInsides(o) {
             el("circle", { cx: x, cy: y, r: 1.8, fill: "var(--pcb)", stroke: "var(--pad)", "stroke-width": 1 }, bg)
 
         // button contacts: a tinned ring with the comb pattern a rubber dome closes
-        for (const b of [L, P, R]) {
+        for (const [b] of keys) {
             el("ellipse", { cx: b.cx, cy: b.cy, rx: b.rx - 3, ry: b.ry - 3, class: "pd-g-pad" }, bg)
             for (const k of [6, 11, 16]) el("ellipse", { cx: b.cx, cy: b.cy, rx: b.rx - 3 - k, ry: b.ry - 3 - k, class: "pd-g-ring" }, bg)
         }
@@ -532,11 +535,11 @@ function createInsides(o) {
         led = el("rect", { x: pw.cx - 3, y: ly - 3.5, width: 6, height: 7, rx: 1, fill: o.led.on }, bg)
 
         // pulses ride on copies of the lines; a press first lights the contact's ring
-        for (const k of ["left", "pet", "right", "power", "spkOut"]) {
+        for (const k of [...keys.map((x) => x[1]), "power", "spkOut"]) {
             const p = el("path", { d: traces[k], class: "pd-g-pulse", filter: `url(#${id("glow")})` }, bg)
             pulses[k] = { el: p, len: p.getTotalLength() }
         }
-        for (const [b, k] of [[L, "left"], [P, "pet"], [R, "right"]])
+        for (const [b, k] of keys)
             pulses[k].flash = el("ellipse", { cx: b.cx, cy: b.cy, rx: b.rx - 4, ry: b.ry - 4, class: "pd-g-pulse", filter: `url(#${id("glow")})` }, bg)
         pulses.power.flash = el("rect", { x: pw.x + 2, y: pw.y + 2, width: pw.w - 4, height: pw.h - 4, rx: 5, class: "pd-g-pulse", filter: `url(#${id("glow")})` }, bg)
 
@@ -550,7 +553,7 @@ function createInsides(o) {
 
         // ---- the front wall's mask: white is plastic, black is a hole ----
         const holes =
-            [L, P, R].map((b) => `<ellipse cx="${b.cx}" cy="${b.cy}" rx="${b.rx - 0.5}" ry="${b.ry - 0.5}" fill="black"/>`).join("") +
+            keys.map(([b]) => `<ellipse cx="${b.cx}" cy="${b.cy}" rx="${b.rx - 0.5}" ry="${b.ry - 0.5}" fill="black"/>`).join("") +
             `<rect x="${pw.x}" y="${pw.y}" width="${pw.w}" height="${pw.h}" rx="7" fill="black"/>` +
             Array.from(o.grille.children).map((i) => { const r = box(i); return `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="2" fill="black"/>` }).join("")
         const mask = `<svg xmlns="${SVG_NS}" viewBox="0 0 ${SH_W} ${SH_H}" width="${SH_W}" height="${SH_H}"><rect width="${SH_W}" height="${SH_H}" fill="white"/>${holes}</svg>`

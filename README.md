@@ -15,9 +15,9 @@ Peri is short for **periwinkle**, one of my brand colors and the inspiration for
 Peri lives in two forms — this repo has both, and they evolve together.
 
 - **`index.html`** — the standalone toy. One file. No build step, nothing to install, no framework. Vanilla JS + a `<canvas>` sprite grid: `<`, `PET` and `>`, the power key, the shell slide, and a speaker grille you can tap to mute her. Sounds come from [cuelume](https://github.com/Danilaa1/cuelume), loaded from a CDN. Open it in a browser and she's there. This is what the live demo above serves.
-- **`PixelPet.framer.tsx`** — the fuller "cyberdeck" version, a Framer code component. Peri is wired by a thin teal cable to a small terminal that logs what I'm up to.
+- **`PixelPet.framer.tsx`** — the fuller "cyberdeck" version, a Framer code component. Peri is wired by a thin teal cable to a small terminal that logs what I'm up to. With **Front door** set to Yes, she becomes my portfolio's entrance instead: alone on the page until you tap her screen, then the camera pushes through her glass onto the site.
 
-Future updates land on both, and they share their code: the shell's CSS and `createInsides()` are identical in the two files. Only the terminal and the cable are Framer-only.
+Future updates land on both, and they share their code: the shell's CSS and `createInsides()` are identical in the two files. Only the terminal, the cable and the front door are Framer-only.
 
 ## Run locally
 
