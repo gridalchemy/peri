@@ -1897,24 +1897,39 @@ export default function PixelPet(props: Props) {
     return props.frontDoor ? <FrontDoor {...props} /> : <Peri {...props} />
 }
 
+// What the door has done during this page load. Framer swaps pages in place, so going to Projects and back
+// to Home mounts the component again, but this code stays loaded and only starts over on a real reload.
+const doorLoad = { mounted: false, shown: false }
+// "Once per visit" is remembered for the browser tab, across reloads; "Every load" means once per page load
+function doorPhase(shows: Props["doorShows"]): "door" | "done" {
+    let seen = false
+    try {
+        seen = sessionStorage.getItem("peri-door-seen") === "1"
+    } catch {
+        /* storage can be blocked; then she shows every time */
+    }
+    return (shows === "once" ? seen : doorLoad.shown) ? "done" : "door"
+}
+
 // The front door covers the window from the very first paint (the dark cover is in the page's HTML before
-// any script runs), then hands over to Peri, drawn at the top of the page above everything else. "Once per
-// visit" is remembered for the browser tab, so going back to Home doesn't show it again.
+// any script runs), then hands over to Peri, drawn at the top of the page above everything else.
 function FrontDoor(props: Props) {
     const target = RenderTarget.current()
     const inEditor = target === RenderTarget.canvas || target === RenderTarget.thumbnail
-    const [phase, setPhase] = useState<"cover" | "door" | "done">("cover")
+    // on the first load the page's HTML starts covered; coming back to Home inside the site, she already
+    // knows, so there's no cover frame to flash
+    const [phase, setPhase] = useState<"cover" | "door" | "done">(() =>
+        doorLoad.mounted && !inEditor ? doorPhase(props.doorShows) : "cover"
+    )
     const markRef = useRef<HTMLSpanElement>(null)
     useEffect(() => {
         if (inEditor) return
-        let seen = false
-        try {
-            seen = sessionStorage.getItem("peri-door-seen") === "1"
-        } catch {
-            /* storage can be blocked; then she shows every time */
-        }
-        setPhase(props.doorShows === "once" && seen ? "done" : "door")
+        doorLoad.mounted = true
+        if (phase === "cover") setPhase(doorPhase(props.doorShows))
     }, [])
+    useEffect(() => {
+        if (phase === "door") doorLoad.shown = true
+    }, [phase])
     const onDone = () => {
         try {
             sessionStorage.setItem("peri-door-seen", "1")
