@@ -458,6 +458,8 @@ interface Props {
     petSound: SoundName
     lookSound: SoundName
     powerSound: SoundName
+    slideSound: SoundName
+    unmuteSound: SoundName
     volume: number
     frontDoor: boolean
     doorShows: "once" | "always"
@@ -899,6 +901,8 @@ function Peri(props: Props & { door?: { onDone: () => void; page: () => HTMLElem
     const [muted, setMuted] = useState(false)
     const mutedRef = useRef(false)
     const insidesRef = useRef<any>(null)
+    // the slide's sound, kept current for the insides, which are set up once
+    const detentsRef = useRef((n: number) => {})
     const r = {
         device: useRef<HTMLDivElement>(null), shell: useRef<HTMLDivElement>(null),
         guts: useRef<SVGSVGElement>(null), surface: useRef<SVGSVGElement>(null), front: useRef<HTMLDivElement>(null),
@@ -957,6 +961,7 @@ function Peri(props: Props & { door?: { onDone: () => void; page: () => HTMLElem
             matIndex: () => matRef.current,
             onPick: (i: number) => {
                 if (i === matRef.current) return
+                detentsRef.current(Math.abs(i - matRef.current))
                 matRef.current = i
                 setMat(i)
             },
@@ -1279,10 +1284,21 @@ function Peri(props: Props & { door?: { onDone: () => void; page: () => HTMLElem
         }
         safePlay(name, volume)
     }
+    // the slide clicks into every stop it passes: one tick per stop, a beat apart (muted, the slots glint once)
+    detentsRef.current = (n: number) => {
+        if (mutedRef.current) return sound(props.slideSound)
+        for (let k = 0; k < n; k++) setTimeout(() => sound(props.slideSound), k * 70)
+    }
+    // muting is silent: the slots closing over say it. Unmuting gives her voice back with a soft swell, and on a
+    // clear shell the speaker thumps with it, as it does whenever sound comes out of it
     const toggleMute = () => {
         const m = !mutedRef.current
         mutedRef.current = m
         setMuted(m)
+        if (!m && soundEnabled) {
+            sound(props.unmuteSound)
+            insides()?.thump()
+        }
         try {
             localStorage.setItem("peri-muted", m ? "1" : "0")
         } catch {
@@ -1954,6 +1970,8 @@ PixelPet.defaultProps = {
     petSound: "success",
     lookSound: "press",
     powerSound: "toggle",
+    slideSound: "tick",
+    unmuteSound: "bloom",
     volume: 0.6,
     frontDoor: false,
     doorShows: "once",
@@ -2025,6 +2043,22 @@ addPropertyControls(PixelPet, {
         type: ControlType.Enum,
         title: "POWER sound",
         defaultValue: "toggle",
+        options: SOUND_NAMES,
+        optionTitles: SOUND_NAMES.map((n) => n[0].toUpperCase() + n.slice(1)),
+        hidden: (p) => !p.soundEnabled,
+    },
+    slideSound: {
+        type: ControlType.Enum,
+        title: "SLIDE sound",
+        defaultValue: "tick",
+        options: SOUND_NAMES,
+        optionTitles: SOUND_NAMES.map((n) => n[0].toUpperCase() + n.slice(1)),
+        hidden: (p) => !p.soundEnabled,
+    },
+    unmuteSound: {
+        type: ControlType.Enum,
+        title: "UNMUTE sound",
+        defaultValue: "bloom",
         options: SOUND_NAMES,
         optionTitles: SOUND_NAMES.map((n) => n[0].toUpperCase() + n.slice(1)),
         hidden: (p) => !p.soundEnabled,

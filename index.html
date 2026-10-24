@@ -764,14 +764,15 @@ function createInsides(o) {
     uid: 'peri', shell: $('shell'), guts: $('guts'), surface: $('surface'), front: $('front'),
     slide: $('slide'), slideKey: slideKeyEl, bezel: $('bezel'), powerWell: $('power-well'),
     grille: grilleEl, left: $('btn-left'), pet: $('btn-pet'), right: $('btn-right'),
-    isClear: () => mat > 0, matIndex: () => mat, onPick: (i) => { if (i !== mat) setMat(i); },
+    isClear: () => mat > 0, matIndex: () => mat, onPick: (i) => { if (i === mat) return; detents(Math.abs(i - mat)); setMat(i); },
     led: { on: C.peri, bright: C.peribright, dim: BULB_DIM[0], off: '#32428D' },
   });
   // the insides are measured off the real layout, so they wait for her font
   (document.fonts ? document.fonts.load("8px 'Press Start 2P'").catch(() => {}) : Promise.resolve()).then(() => insides.build());
 
   // ---- sound: cuelume, synthesized UI sounds, the same picks as the Framer component's defaults:
-  // PET 'success', LOOK 'press', power 'toggle', at volume 0.6; each one plays when she reacts ----
+  // PET 'success', LOOK 'press', power 'toggle', slide 'tick', unmute 'bloom', at volume 0.6; each one plays when she
+  // reacts ----
   // tapping the speaker grille mutes her (remembered per visitor); muted, a press that would have made a
   // sound makes the closed slots glint once, so the silence has a reason
   let cue = null;
@@ -787,7 +788,12 @@ function createInsides(o) {
     grilleEl.title = m ? 'Tap the speaker to unmute her' : 'Tap the speaker to mute her';
   };
   setMuted(muted);
-  grilleEl.addEventListener('click', () => setMuted(!muted));
+  // muting is silent: the slots closing over say it. Unmuting gives her voice back with a soft swell, and on a
+  // clear shell the speaker thumps with it, as it does whenever sound comes out of it
+  grilleEl.addEventListener('click', () => {
+    setMuted(!muted);
+    if (!muted) { sound('bloom'); insides.thump(); }
+  });
   const sound = (name) => {
     if (muted) {
       [...grilleEl.children].forEach((i, k) => i.animate([{ opacity: 0.22 }, { opacity: 0.6 }, { opacity: 0.22 }], { duration: 420, delay: k * 40 }));
@@ -795,6 +801,11 @@ function createInsides(o) {
     }
     if (!cue) return;
     try { cue.play(name, { volume: 0.6 }); } catch (e) { /* sound is a nicety, not a requirement */ }
+  };
+  // the slide clicks into every stop it passes: one tick per stop, a beat apart (muted, the slots glint once)
+  const detents = (n) => {
+    if (muted) { sound('tick'); return; }
+    for (let k = 0; k < n; k++) setTimeout(() => sound('tick'), k * 70);
   };
 
   // ---- buttons: on a clear shell each press runs along its line first, and she reacts as it lands ----
