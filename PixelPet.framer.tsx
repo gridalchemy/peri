@@ -756,7 +756,7 @@ const CSS = `
     box-shadow: inset 2px 2px 0 rgba(255,255,255,0.35), inset -2px -1px 0 rgba(110,51,84,0.45), 0 2px 0 rgba(110,51,84,0.45), 0 0 0 1px rgba(110,51,84,0.45);
 }
 /* water-clear plastic takes on whatever is behind it, and the component can't know the page, so the
-   wordmark is printed: light ink with the 8-way pixel halo from brand/peri-pixel-outline.svg */
+   wordmark is printed: light ink in an 8-way pixel halo, so no staircase corner breaks open */
 .pd-mat-clear .pd-wordmark {
     color: #E2E7FF; text-shadow:
         1px 0 0 #32428D, -1px 0 0 #32428D, 0 1px 0 #32428D, 0 -1px 0 #32428D,

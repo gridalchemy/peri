@@ -52,9 +52,7 @@ HOLES = {(3, 5), (4, 5), (3, 6), (4, 6), (9, 5), (10, 5), (9, 6), (10, 6), (6, 8
 FILLED = {(c, r) for r, row in enumerate(GRID) for c, ch in enumerate(row)
           if ch != ' ' and (c, r) not in HOLES}
 on = lambda c, r: (c, r) in FILLED
-ch_at = lambda c, r: GRID[r][c] if 0 <= r < len(GRID) and 0 <= c < len(GRID[r]) else ' '
 cell = lambda c, r: 'M%d %dh2v2h-2z' % (2 + c * 2, 3 + r * 2)
-N8 = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)]
 
 
 def svg(body, vb='0 0 32 32', w=32, h=32, note=''):
@@ -103,24 +101,7 @@ files['peri-pixel.svg'] = svg(
     '    <path fill="%s" d="%s"/>\n'
     '  </g>' % (BODY_VAR, ''.join(body_cells), BULB_VAR, ''.join(bulb_cells)), note=HOOK)
 
-# 5 - pixel outline: the empty cells touching her, 8-way so the corners stay closed
-halo_body, halo_bulb = [], []
-for r in range(-1, len(GRID) + 1):
-    for c in range(-1, 15):
-        if on(c, r):
-            continue
-        touched = [(dc, dr) for dc, dr in N8 if on(c + dc, r + dr)]
-        if not touched:
-            continue
-        tgt = halo_bulb if all(ch_at(c + dc, r + dr) == 'A' for dc, dr in touched) else halo_body
-        tgt.append(cell(c, r))
-files['peri-pixel-outline.svg'] = svg(
-    '  <g shape-rendering="crispEdges">\n'
-    '    <path fill="%s" d="%s"/>\n'
-    '    <path fill="%s" d="%s"/>\n'
-    '  </g>' % (BODY_VAR, ''.join(halo_body), BULB_VAR, ''.join(halo_bulb)), note=HOOK)
-
-# 6 - app tile
+# 5 - app tile
 files['peri-badge.svg'] = svg(
     '  <defs>\n'
     '    <linearGradient id="peri-shell" x1="0.3" y1="0" x2="0.75" y2="1">\n'
@@ -140,7 +121,7 @@ files['peri-badge.svg'] = svg(
     vb='0 0 48 48', w=48, h=48,
     note='also peri-tile-light, peri-tile, peri-tile-dark and peri-screen')
 
-# 7 - favicon. A browser tab cannot inherit page CSS, so this one carries its own
+# 6 - favicon. A browser tab cannot inherit page CSS, so this one carries its own
 #     light/dark pair and is the file you edit per-palette rather than theme.
 files['peri-favicon.svg'] = svg(
     '  <style>\n'

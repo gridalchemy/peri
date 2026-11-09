@@ -38,7 +38,7 @@ The Framer component is used inside Framer — paste `PixelPet.framer.tsx` into 
 
 ## Brand
 
-The `brand/` folder holds Peri's marks — a smooth silhouette, a pixel-true one, outlines, an
+The `brand/` folder holds Peri's marks — a smooth silhouette, a pixel-true one, an outline, an
 app tile and a favicon, all built on the same 32×32 grid mapped 1:1 off her sprite. Open
 [`brand/index.html`](brand/index.html) to see the set at every size, and
 [`brand/README.md`](brand/README.md) for when to use pixel Peri and when a smooth mark.
@@ -50,7 +50,7 @@ follows. (An `<img src="…svg">` can't see your page's CSS, so it always shows 
 
 To use a mark, copy the `.svg` — there is nothing to install and nothing to run. The
 scripts in [`tools/`](tools/) only matter if you want to change something all the marks
-share, like her silhouette or the artboard: `build-brand.py` writes the seven `.svg` files
+share, like her silhouette or the artboard: `build-brand.py` writes the six `.svg` files
 from one definition, and `build-sheet.py` writes the contact sheet from those. They need
 Python, they are optional, and the toy above still has no build step and no dependencies.
 

@@ -14,7 +14,6 @@ CAP = [
     ('peri-mark-mono.svg',    'one colour &middot; currentColor',    True),
     ('peri-mark-line.svg',    'outline &middot; UI chrome',          True),
     ('peri-pixel.svg',        'pixel-true &middot; 1:1 with the sprite', False),
-    ('peri-pixel-outline.svg', 'pixel outline &middot; 8-way halo',  False),
     ('peri-badge.svg',        'app tile &middot; her in the shell',  False),
     ('peri-favicon.svg',      'favicon &middot; adapts to light/dark', False),
 ]
