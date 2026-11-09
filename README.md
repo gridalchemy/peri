@@ -63,7 +63,6 @@ Python, they are optional, and the toy above still has no build step and no depe
 
 **The code is [MIT](LICENSE). Peri herself isn't.** Fork it, ship it, swap in your own mark.
 
-**Peri's brand is not.** The marks in [`brand/`](brand/), the Peri name and wordmark, and her
-likeness used as a logo are reserved — see [`brand/NOTICE.md`](brand/NOTICE.md). You're welcome
-to use them to refer to this project; you may not use them as the branding of your own. If you
-fork and ship something, swap in your own mark.
+The marks in [`brand/`](brand/), the Peri name and wordmark, and her likeness used as a logo
+are reserved — see [`brand/NOTICE.md`](brand/NOTICE.md). You're welcome to use them to refer to
+this project; you may not use them as the branding of your own.
