@@ -19,7 +19,7 @@ Peri lives in two forms — this repo has both, and they evolve together.
 
 Future updates land on both, and they share their code: the shell's CSS and `createInsides()` are identical in the two files. Only the terminal, the cable and the front door are Framer-only.
 
-**`3d/`** forks off from both: Peri as a real object (v3.0), her shell modeled in three.js with real plastic, screws and a battery door. It's the blueprint for a Peri you could hold. It keeps its own copy of her code and isn't part of the promise above: updates to the two forms don't land here, and its changes don't land there. **[▶ See her in 3D](https://gridalchemy.github.io/peri/3d/)**
+**`3d/`** forks off from both: Peri as a real object (v3.0), her shell modeled in three.js with real plastic, screws and a battery door. It's the blueprint for a Peri you could hold. It keeps its own copy of her code and isn't part of the promise above. **[▶ See her in 3D](https://gridalchemy.github.io/peri/3d/)**
 
 ## Run locally
 
@@ -46,7 +46,7 @@ app tile and a favicon, all built on the same 32×32 grid mapped 1:1 off her spr
 [`brand/README.md`](brand/README.md) for when to use pixel Peri and when a smooth mark.
 
 She can wear another palette. The duotone marks read two CSS custom properties,
-`--peri-body` and `--peri-bulb`, each falling back to her own colours; the one-colour and
+`--peri-body` and `--peri-bulb`, each falling back to her own colors; the one-color and
 outline marks use `currentColor`. Set them on any ancestor of an inlined `<svg>` and she
 follows. (An `<img src="…svg">` can't see your page's CSS, so it always shows the fallbacks.)
 
