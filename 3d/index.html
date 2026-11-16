@@ -98,8 +98,9 @@ window.__peri = peri; window.__probe = peri.probe;
 
 // ======== PERI 3D: everything below builds her and runs her, in any <canvas> ========
 // It touches nothing outside its canvas: the page above (or the Framer component) passes in three.js and
-// cuelume, and handles toggles, keys and sizing. explore/portfolio/peri-3d/build.py copies this block,
-// from here to the end marker, into Peri3D.framer.tsx, so change her here and run it.
+// cuelume, and handles toggles, keys and sizing. The Framer component is kept outside this repo (in
+// explore/portfolio/peri-3d/, untracked): its build.py copies this block, from here to the end marker, into
+// Peri3D.framer.tsx, so change her here and run it.
 //   deps:    { THREE, OrbitControls, RoundedBoxGeometry, EffectComposer, RenderPass, UnrealBloomPass, OutputPass, cuelume }
 //   options: { mat, view, tone, background, glow, zoom, touchScroll, sound, volume, fast, active, onChange }
 async function mountPeri3D(canvas, deps, options = {}) {
