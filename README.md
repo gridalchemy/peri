@@ -19,6 +19,8 @@ Peri lives in two forms — this repo has both, and they evolve together.
 
 Future updates land on both, and they share their code: the shell's CSS and `createInsides()` are identical in the two files. Only the terminal, the cable and the front door are Framer-only.
 
+**`3d/`** forks off from both: Peri as a real object (v3.0), her shell modeled in three.js with real plastic, screws and a battery door. It's the blueprint for a Peri you could hold. It keeps its own copy of her code and isn't part of the promise above: updates to the two forms don't land here, and its changes don't land there. **[▶ See her in 3D](https://gridalchemy.github.io/peri/3d/)**
+
 ## Run locally
 
 ```bash
@@ -32,7 +34,7 @@ Then either double-click `index.html` or serve the folder:
 python -m http.server 8000
 ```
 
-…and open <http://localhost:8000>.
+…and open <http://localhost:8000>, or <http://localhost:8000/3d/> for her in 3D.
 
 The Framer component is used inside Framer — paste `PixelPet.framer.tsx` into a code component there.
 
