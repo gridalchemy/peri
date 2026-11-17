@@ -5,10 +5,13 @@ set of colour hooks, so they are generated rather than hand-kept-in-sync.
 
     python tools/build-brand.py
 
-Colour hooks: every mark reads --peri-body and --peri-bulb (plus --peri-tile-*
-and --peri-screen on the badge), each with her own colour as the fallback. Set
-them on any ancestor and an INLINED svg follows; an <img src="...svg"> cannot
-see page CSS and will always show the fallback.
+Colour hooks: every mark reads --peri-body and --peri-bulb, each with her own
+colour as the fallback. The badge is the exception: it shows her shaded sprite
+on her screen, and the character never changes, so only its shell does
+(--peri-tile-light, --peri-tile, --peri-tile-dark, --peri-look, --peri-pet and
+--peri-screen), like a Tamagotchi sold in another colorway. Set them on any
+ancestor and an INLINED svg follows; an <img src="...svg"> cannot see page CSS
+and will always show the fallback.
 """
 
 import io
@@ -101,25 +104,65 @@ files['peri-pixel.svg'] = svg(
     '    <path fill="%s" d="%s"/>\n'
     '  </g>' % (BODY_VAR, ''.join(body_cells), BULB_VAR, ''.join(bulb_cells)), note=HOOK)
 
-# 5 - app tile
+# 5 - app tile: her device in miniature. The periwinkle shell, the screen in its bezel with her SHADED
+#     sprite on it (on a screen she is the character, so she is pixel), and the three buttons under it.
+#     A palette recolours the shell and the buttons, never her: PET takes the palette's accent, the two
+#     LOOK buttons a deeper shade of the shell, the way her own #4E63C7 is a deeper periwinkle.
+SPRITE = ["      AA      ", "      BB      ", "   HHHHHHHH   ", "  HHHHHHHHHH  ", " BBBBBBBBBBBB ",
+          " BBBBBBBBBBBB ", " BBBBBBBBBBBB ", " BBBBBBBBBBBB ", " BBBBBBBBBBBB ", " DDDDDDDDDDDD ",
+          "  DDDDDDDDDD  ", "   DDDDDDDD   ", "   DD    DD   "]
+TONES = {'H': ('#A3E6E6', '#7FD0D2', '#66B6B8'), 'B': ('#71C6C8', '#59AFB1', '#448E90'),
+         'D': ('#4B9294', '#3E8385', '#2B6163')}           # lit / base / away, as in index.html
+IDLE = {(3, 5), (4, 5), (3, 6), (4, 6), (9, 5), (10, 5), (9, 6), (10, 6), (6, 8), (7, 8)}
+
+
+def shaded_sprite(x0, y0, k):
+    """Her idle frame with the shipped shading, one path per colour."""
+    def filled(r, c):
+        return 0 <= r < len(SPRITE) and 0 <= c < 14 and SPRITE[r][c] != ' '
+    by = {}
+    for r, row in enumerate(SPRITE):
+        for c, ch in enumerate(row):
+            if ch == ' ':
+                continue
+            if (c, r) in IDLE:
+                col = '#050810'
+            elif ch == 'A':
+                col = PERI
+            elif ch == 'B' and r < 2:
+                col = '#3E8385'
+            elif r == 2 and c in (4, 5):
+                col = '#B4ECEC'
+            else:
+                lit, base, away = TONES[ch]
+                if not filled(r, c + 1) or (ch == 'D' and not filled(r + 1, c)):
+                    col = away
+                elif not filled(r, c - 1) or not filled(r - 1, c):
+                    col = lit
+                else:
+                    col = base
+            by.setdefault(col, []).append('M%g %gh%gv%gh-%gz' % (x0 + c * k, y0 + r * k, k, k, k))
+    return '\n'.join('    <path fill="%s" d="%s"/>' % (col, ''.join(d)) for col, d in by.items())
+
+
 files['peri-badge.svg'] = svg(
     '  <defs>\n'
-    '    <linearGradient id="peri-shell" x1="0.3" y1="0" x2="0.75" y2="1">\n'
-    '      <stop offset="0" stop-color="var(--peri-tile-light, #A1B1FC)"/>\n'
+    '    <linearGradient id="peri-shell" x1="0" y1="0" x2="0" y2="1">\n'
+    '      <stop offset="0" stop-color="var(--peri-tile-light, #92A4F5)"/>\n'
     '      <stop offset="0.5" stop-color="var(--peri-tile, #8497F3)"/>\n'
-    '      <stop offset="1" stop-color="var(--peri-tile-dark, #6073CF)"/>\n'
+    '      <stop offset="1" stop-color="var(--peri-tile-dark, #7687DA)"/>\n'
     '    </linearGradient>\n'
     '  </defs>\n'
     '  <rect width="48" height="48" rx="12" fill="url(#peri-shell)"/>\n'
-    '  <rect x="7" y="8.5" width="34" height="31" rx="5" fill="var(--peri-screen, #050810)"/>\n'
-    '  <g transform="translate(8.6 9.8) scale(0.715)">\n'
-    '    <path fill="%s" fill-rule="evenodd" d="%s"/>\n'
-    '    <path fill="%s" d="%s"/>\n'
-    '    <circle cx="%s" cy="%s" r="%s" fill="%s"/>\n'
-    '  </g>'
-    % (BODY_VAR, FACE, BODY_VAR, STEM, BULB_C[0], BULB_C[1], BULB_C[2], BULB_VAR),
+    '  <rect x="7.5" y="6.5" width="33" height="27" rx="5" fill="#1E2649"/>\n'
+    '  <rect x="9.5" y="8.5" width="29" height="23" rx="3.2" fill="var(--peri-screen, #050810)"/>\n'
+    '  <g shape-rendering="crispEdges">\n%s\n  </g>\n'
+    '  <circle cx="15.5" cy="39.6" r="3" fill="var(--peri-look, #4E63C7)"/>\n'
+    '  <circle cx="24" cy="40.4" r="3.3" fill="var(--peri-pet, #BF5E95)"/>\n'
+    '  <circle cx="32.5" cy="39.6" r="3" fill="var(--peri-look, #4E63C7)"/>'
+    % shaded_sprite(13.5, 10.5, 1.5),
     vb='0 0 48 48', w=48, h=48,
-    note='also peri-tile-light, peri-tile, peri-tile-dark and peri-screen')
+    note='her sprite is fixed; the shell reads peri-tile-light, peri-tile, peri-tile-dark, peri-look, peri-pet and peri-screen')
 
 # 6 - favicon. A browser tab cannot inherit page CSS, so this one carries its own
 #     light/dark pair and is the file you edit per-palette rather than theme.

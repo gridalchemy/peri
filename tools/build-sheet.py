@@ -27,6 +27,18 @@ PALETTES = [
     ('candy',      '#BF5E95', '#7FD0D2'),
 ]
 
+# the badge in each palette: a shell colorway, her sprite unchanged. The shell is the palette's body
+# (periwinkle on her own), lightened 12% / darkened 8% in OKLab for the top and bottom of the plastic;
+# PET takes the accent; LOOK is the shell 30% deeper (22% lighter on slate, whose shell is already dark).
+#                light      shell      dark       look       pet
+BADGE = {
+    'peri (default)': ('#92A4F5', '#8497F3', '#7687DA', '#4E63C7', '#BF5E95'),
+    'ember':          ('#E68261', '#E0704A', '#C86441', '#8A432A', '#F5C563'),
+    'moss':           ('#7DA987', '#6B9E78', '#5F8D6B', '#3F6048', '#D9E8A0'),
+    'slate':          ('#434963', '#2E3350', '#282D47', '#565B74', '#A9AEFB'),
+    'candy':          ('#C872A1', '#BF5E95', '#AB5385', '#75375A', '#7FD0D2'),
+}
+
 
 def read(name):
     src = io.open(os.path.join(BRAND, name), encoding='utf-8').read().strip()
@@ -46,16 +58,19 @@ def main():
 
     mark = read('peri-mark.svg')
     pixel = read('peri-pixel.svg')
+    badge = read('peri-badge.svg')
     swatches = []
     for label, body, bulb in PALETTES:
-        style = '--peri-body:%s;--peri-bulb:%s' % (body, bulb)
+        style = ('--peri-body:%s;--peri-bulb:%s;--peri-tile-light:%s;--peri-tile:%s;--peri-tile-dark:%s;'
+                 '--peri-look:%s;--peri-pet:%s' % ((body, bulb) + BADGE[label]))
         swatches.append(
             '<figure style="%s"><div class="sizes">'
             '<span style="display:inline-block;width:64px;height:64px">%s</span>'
             '<span style="display:inline-block;width:64px;height:64px">%s</span>'
+            '<span style="display:inline-block;width:64px;height:64px">%s</span>'
             '<span style="display:inline-block;width:24px;height:24px">%s</span>'
             '</div><figcaption><code>%s</code><span>%s &nbsp;/&nbsp; %s</span></figcaption></figure>'
-            % (style, mark, pixel, mark, label, body, bulb))
+            % (style, mark, pixel, badge.replace('peri-shell', 'peri-shell-' + label.split()[0]), mark, label, body, bulb))
 
     page = '''<!doctype html>
 <html lang="en">
@@ -112,8 +127,11 @@ def main():
   <div class="grid">
 ''' + '\n'.join('    ' + s for s in swatches) + '''
   </div>
-  <p class="note">The badge additionally exposes <code>--peri-tile-light</code>,
-  <code>--peri-tile</code>, <code>--peri-tile-dark</code> and <code>--peri-screen</code>.</p>
+  <p class="note">The badge is the one mark where she never changes: it shows her shaded sprite on
+  her screen, so a palette dresses only the shell, like a Tamagotchi in another colorway. It reads
+  <code>--peri-tile-light</code>, <code>--peri-tile</code> and <code>--peri-tile-dark</code> for the
+  plastic, <code>--peri-pet</code> for PET (the palette's accent), <code>--peri-look</code> for the
+  two LOOK buttons (a deeper shade of the shell) and <code>--peri-screen</code>.</p>
 
   <h2>How to set them</h2>
   <pre>&lt;!-- inline the svg, then style it from anywhere above it --&gt;
