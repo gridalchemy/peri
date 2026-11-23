@@ -4,11 +4,14 @@
 //
 // The shell, its clear versions and the insides are shared with index.html: the CSS block marked
 // "Shared with index.html" and createInsides() below are identical in both, keep them that way.
-// Only the terminal, the cable and the front door are Framer-only.
+// Only the terminal, the cable, the front door and her photo are Framer-only.
 //
 // Front door: the same component with "Front door" set to Yes, placed on Home. On the live site (and in
 // Preview) Peri covers the whole window until a visitor taps her screen; then her screen shows the page
 // and the camera pushes through the glass onto it. In the editor it shows as a small placeholder card.
+//
+// Photo (About): set the "Photo" property and LOOK renders it on her screen, dithered in her tones, with
+// the command she ran in the terminal. The same arrows, or PET, bring her back.
 //
 // Sound: uses `cuelume` (MIT) — synthesized Web Audio UI sounds, no files.
 // Loaded from the esm.sh CDN because Framer's package manager can't resolve a
@@ -31,10 +34,11 @@ import { play } from "https://esm.sh/cuelume@0.2.2"
 //     Keep entries slow-turning so an occasional update is enough to stay fresh.
 // ─────────────────────────────────────────────────────────────────────────
 const LOG: { k: string; v: string }[] = [
-    { k: "reading", v: "The Path to Senior PD" },
+    { k: "reading", v: "Where the Dark Stands Still" },
     { k: "playing", v: "Nivalis Nights" },
-    { k: "learning", v: "Frontend Development" },
+    { k: "learning", v: "CAD for Peri v3" },
     { k: "working", v: "Reckon: Phase C (Capture flow)" },
+    { k: "", v: "Nacre: M2 (3 sessions)" },
 ]
 
 // One-line "what is this" caption under the deck. Comment style, techy/minimal.
@@ -50,6 +54,96 @@ const C = {
     peri: "#8497F3",
     peribright: "#B2C0FF",
     heart: "#BF5E95",
+}
+
+// ---- her photo (About only): LOOK makes Peri glance that way, then she renders the photo onto her own
+// screen, dithered in her tones, and the terminal shows the command she ran. The photo comes from the
+// "Photo" property. The same arrow, or PET, brings her back.
+const PHOTO_FILE = "me.png" // what the terminal says she rendered
+const PHOTO_ALT = "A photo of me, dithered by Peri"
+// the "Photo tones" property, dark to light; one dither dot per pixel of her 198 x 160 screen
+const PHOTO_TONES = {
+    peri: [C.bg, "#32428D", C.peri, C.peribright], // one colour family, so the photo reads as hers
+    five: [C.bg, "#32428D", C.tdark, C.teal, C.peribright], // adds her teal: more range, a cooler cast on skin
+}
+const LOOK_LEAD = 260 // she glances first, then the photo comes in from that side
+const SLIDE_MS = 440
+const SLIDE_EASE = "cubic-bezier(.65,0,.35,1)"
+
+// 8 x 8 ordered-dither thresholds, 0..1
+const BAYER8 = (() => {
+    let m = [[0]]
+    while (m.length < 8) {
+        const n = m.length
+        const next: number[][] = []
+        for (let y = 0; y < n * 2; y++) {
+            next.push([])
+            for (let x = 0; x < n * 2; x++)
+                next[y].push(4 * m[y % n][x % n] + [[0, 2], [3, 1]][Math.floor(y / n)][Math.floor(x / n)])
+        }
+        m = next
+    }
+    return m.map((row) => row.map((v) => (v + 0.5) / 64))
+})()
+const rgbOf = (hex: string) => {
+    const n = parseInt(hex.slice(1), 16)
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+// The photo, cropped to fill her screen (a little above centre, where a face sits), shrunk to one value per
+// pixel, its levels stretched so it uses the whole ramp, then dithered into her tones.
+function ditherPhoto(img: HTMLImageElement, palette: string[]): HTMLCanvasElement {
+    const w = CW
+    const h = CH
+    // halve big photos step by step first, so the last shrink stays smooth
+    let src: CanvasImageSource = img
+    let sw = img.naturalWidth
+    let sh = img.naturalHeight
+    while (Math.max(w / sw, h / sh) < 0.5) {
+        const c = document.createElement("canvas")
+        c.width = Math.ceil(sw / 2)
+        c.height = Math.ceil(sh / 2)
+        c.getContext("2d")!.drawImage(src, 0, 0, c.width, c.height)
+        src = c
+        sw = c.width
+        sh = c.height
+    }
+    const out = document.createElement("canvas")
+    out.width = w
+    out.height = h
+    const g = out.getContext("2d", { willReadFrequently: true })!
+    g.imageSmoothingQuality = "high"
+    const k = Math.max(w / sw, h / sh)
+    g.drawImage(src, (w - sw * k) / 2, (h - sh * k) * 0.3, sw * k, sh * k)
+    const data = g.getImageData(0, 0, w, h)
+    const px = data.data
+    const lum = new Float32Array(w * h)
+    for (let i = 0; i < w * h; i++)
+        lum[i] = (0.2126 * px[i * 4] + 0.7152 * px[i * 4 + 1] + 0.0722 * px[i * 4 + 2]) / 255
+    // levels: the darkest and lightest 1% clip, the rest spreads over the ramp
+    const sorted = Array.from(lum).sort((a, b) => a - b)
+    const lo = sorted[Math.floor(sorted.length * 0.01)]
+    const hi = sorted[Math.floor(sorted.length * 0.99)]
+    for (let i = 0; i < lum.length; i++) lum[i] = Math.min(1, Math.max(0, (lum[i] - lo) / Math.max(hi - lo, 1e-3)))
+    const tones = palette.map(rgbOf)
+    const last = tones.length - 1
+    // ordered (Bayer) dither: each dot rounds up or down against its place in the 8 x 8 grid
+    const idx = new Uint8Array(w * h)
+    for (let y = 0; y < h; y++)
+        for (let x = 0; x < w; x++) {
+            const i = y * w + x
+            const v = lum[i] * last
+            const b = Math.floor(v)
+            idx[i] = Math.min(last, b + (v - b > BAYER8[y % 8][x % 8] ? 1 : 0))
+        }
+    for (let i = 0; i < w * h; i++) {
+        const [r, gg, b] = tones[idx[i]]
+        px[i * 4] = r
+        px[i * 4 + 1] = gg
+        px[i * 4 + 2] = b
+        px[i * 4 + 3] = 255
+    }
+    g.putImageData(data, 0, 0)
+    return out
 }
 
 // ---- sprite geometry ----
@@ -446,6 +540,7 @@ interface PetState {
     refillAt: number // the mood meter refills from where it was, left to right, after a pet
     levelAtPet: number
     smileUntil: number // front door: her HAPPY still (the hop's eyes, mouth closed) as she lets you in
+    away: boolean // her photo is on the screen instead of her: the mood clock waits
 }
 
 interface Props {
@@ -463,6 +558,8 @@ interface Props {
     volume: number
     frontDoor: boolean
     doorShows: "once" | "always"
+    photo?: string
+    photoTones: keyof typeof PHOTO_TONES
 }
 
 const pause = (ms: number) => new Promise<void>((done) => setTimeout(done, ms))
@@ -479,7 +576,8 @@ const HANDOVER_AT = 0.84
 
 // scoped CSS. All classes prefixed `pd-` so nothing leaks into the host page.
 const CSS = `
-.pd-deck { display: flex; align-items: center; justify-content: center; gap: 0; }
+/* line-height: normal, so the page's own line-height can't push her caption, buttons and grille down */
+.pd-deck { display: flex; align-items: center; justify-content: center; gap: 0; line-height: normal; }
 
 /* ===== Peri. Shared with index.html: keep the two copies identical. =====
    All classes are prefixed pd- so nothing leaks into a host page. */
@@ -808,6 +906,16 @@ const CSS = `
 @keyframes pdBlink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
 
 .pd-body > * { animation: pdBootIn 0.32s ease both; }
+/* her photo: the command she ran, the dither working, then done */
+.pd-prompt.pd-render { margin-top: 14px; margin-bottom: 2px; }
+.pd-prompt.pd-after { margin-top: 12px; margin-bottom: 0; }
+.pd-render .pd-cmd { min-height: 1.7em; }
+.pd-busy::after { content: "…"; display: inline-block; animation: pdBlink 0.5s infinite; }
+.pd-done { color: ${C.teal}; }
+.pd-photo {
+    position: absolute; top: 0; left: 0; display: block; width: ${CW}px; height: ${CH}px;
+    image-rendering: pixelated; transform: translateX(100%);
+}
 @keyframes pdBootIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
 /* Stacking is driven by the component's own measured width (ResizeObserver),
@@ -919,6 +1027,16 @@ function Peri(props: Props & { door?: { onDone: () => void; page: () => HTMLElem
     const stageRef = useRef<HTMLDivElement>(null)
     const lcdRef = useRef<HTMLDivElement>(null)
     const doorRun = useRef({ entering: false, anims: [] as Animation[], clone: null as HTMLElement | null })
+    // her photo: which side it's on (0 while she's on screen), what the terminal shows, and the dithered
+    // image, made once when the photo loads
+    const hasPhoto = !!props.photo && !door
+    const photoCvRef = useRef<HTMLCanvasElement>(null)
+    const photoArt = useRef<Promise<HTMLCanvasElement | null>>(Promise.resolve(null))
+    const sideRef = useRef(0)
+    const busyRef = useRef(false)
+    const runRef = useRef(0) // power bumps it, so a slide in flight knows it's been called off
+    const [shot, setShot] = useState<"off" | "typing" | "rendering" | "on">("off")
+    const [typed, setTyped] = useState(0)
 
     // Responsive by the component's OWN width (works with Framer's sizing /
     // breakpoints), stacking Peri above the terminal when it gets narrow.
@@ -1017,6 +1135,7 @@ function Peri(props: Props & { door?: { onDone: () => void; page: () => HTMLElem
             refillAt: -1e9,
             levelAtPet: 5,
             smileUntil: 0,
+            away: false,
         }
         petRef.current = pet
 
@@ -1057,7 +1176,8 @@ function Peri(props: Props & { door?: { onDone: () => void; page: () => HTMLElem
                 pet.onScreen &&
                 !document.hidden &&
                 pet.hopStart == null &&
-                !pet.asleep
+                !pet.asleep &&
+                !pet.away
             )
                 pet.lonely += dt
             const mood = pet.asleep
@@ -1272,6 +1392,120 @@ function Peri(props: Props & { door?: { onDone: () => void; page: () => HTMLElem
         }
     }, [])
 
+    // the photo is dithered as soon as it loads, so a press never waits on it
+    useEffect(() => {
+        if (!hasPhoto) return
+        let live = true
+        const img = new Image()
+        img.crossOrigin = "anonymous" // the dither reads the photo's pixels, which a cross-origin image only allows with CORS
+        img.decoding = "async"
+        const loaded = new Promise<HTMLImageElement | null>((done) => {
+            img.onload = () => done(img)
+            img.onerror = () => done(null)
+        })
+        img.src = props.photo!
+        photoArt.current = loaded.then((im) => {
+            const cv = photoCvRef.current
+            if (!im || !live || !cv) return null
+            let art: HTMLCanvasElement
+            try {
+                art = ditherPhoto(im, PHOTO_TONES[props.photoTones] || PHOTO_TONES.peri)
+            } catch {
+                return null // served without CORS: then LOOK just looks
+            }
+            const dpr = Math.min(window.devicePixelRatio || 1, 2)
+            cv.width = CW * dpr
+            cv.height = CH * dpr
+            const ctx = cv.getContext("2d")!
+            ctx.imageSmoothingEnabled = false
+            ctx.drawImage(art, 0, 0, CW * dpr, CH * dpr)
+            return art
+        })
+        return () => {
+            live = false
+        }
+    }, [props.photo, props.photoTones, hasPhoto])
+
+    // one screen pushes the other out: the incoming one enters from `from` (-1 left, 1 right)
+    const push = (incoming: HTMLElement, outgoing: HTMLElement, from: number) =>
+        Promise.all([
+            incoming.animate([{ transform: `translateX(${from * 100}%)` }, { transform: "none" }], {
+                duration: SLIDE_MS, easing: SLIDE_EASE, fill: "forwards",
+            }).finished,
+            outgoing.animate([{ transform: "none" }, { transform: `translateX(${-from * 100}%)` }], {
+                duration: SLIDE_MS, easing: SLIDE_EASE, fill: "forwards",
+            }).finished,
+        ]).then(
+            () => true,
+            () => false // cancelled by the power key
+        )
+    const lookAt = (pet: PetState, dir: number, until: number) => {
+        pet.snubSide = dir // while snubbing, LOOK changes which way she turns away
+        pet.micro = "look"
+        pet.microDir = dir
+        pet.microUntil = until
+    }
+    // she looks that way, types the command, and the photo pushes her off the screen from that side
+    const showPhoto = async (dir: number) => {
+        const pet = petRef.current
+        const cv = canvasRef.current
+        const pc = photoCvRef.current
+        if (!pet || !cv || !pc) return
+        const run = runRef.current
+        busyRef.current = true
+        lookAt(pet, dir, performance.now() + 850)
+        setShot("typing")
+        const cmd = `render ${PHOTO_FILE}`
+        for (let i = 1; i <= cmd.length; i++) {
+            setTyped(i)
+            await pause(LOOK_LEAD / cmd.length)
+        }
+        if (run !== runRef.current) return
+        setShot("rendering")
+        const art = await photoArt.current
+        if (run !== runRef.current) return
+        if (!art) {
+            // the photo didn't load: she just looked
+            setShot("off")
+            busyRef.current = false
+            return
+        }
+        sideRef.current = dir
+        pet.away = true
+        const ok = await push(pc, cv, dir)
+        if (!ok || run !== runRef.current) return
+        setShot("on")
+        busyRef.current = false
+    }
+    // she comes back from `from`, pushing the photo out the other side; LOOK has her looking that way as
+    // she arrives
+    const bringHerBack = async (from: number, looking: boolean) => {
+        const pet = petRef.current
+        const cv = canvasRef.current
+        const pc = photoCvRef.current
+        if (!pet || !cv || !pc) return false
+        const run = runRef.current
+        busyRef.current = true
+        setShot("off")
+        pet.away = false
+        if (looking) lookAt(pet, from, performance.now() + SLIDE_MS + 650)
+        const ok = await push(cv, pc, from)
+        if (!ok || run !== runRef.current) return false
+        sideRef.current = 0
+        busyRef.current = false
+        return true
+    }
+    // the power key: the screen just goes, no slide
+    const dropPhoto = () => {
+        runRef.current++
+        for (const el of [canvasRef.current, photoCvRef.current])
+            el?.getAnimations().forEach((a) => a.cancel())
+        sideRef.current = 0
+        busyRef.current = false
+        if (petRef.current) petRef.current.away = false
+        setShot("off")
+    }
+
     // sound plays when she reacts. Muted (tap the speaker grille), a press that would have made a sound
     // makes the closed slots glint once, so the silence has a reason
     const sound = (name: SoundName) => {
@@ -1315,28 +1549,40 @@ function Peri(props: Props & { door?: { onDone: () => void; page: () => HTMLElem
                 pet.peekUntil = t + 900 // one sleepy eye, then back to sleep
                 return
             }
-            pet.levelAtPet = Math.max(0, 1 - pet.lonely / SULK_AFTER) * 5
-            pet.refillAt = t
-            pet.lonely = 0
-            sound(petSound)
-            if (soundEnabled && !mutedRef.current) insides()?.pulse("spkOut", insides()?.thump) // her sound runs back down to the speaker
-            if (pet.hopStart == null) {
-                pet.hopStart = t
-                pet.hearts.push({ born: t, x: OX + 3.5 * ART })
+            // her photo is up: PET brings her back the way she left, and she gets the pet as she lands
+            if (sideRef.current !== 0) {
+                if (!busyRef.current) bringHerBack(-sideRef.current, false).then((ok) => ok && petHer())
+                return
             }
-            setMsg(true)
-            clearTimeout(msgTimer.current)
-            msgTimer.current = setTimeout(() => setMsg(false), 2600)
+            petHer()
         })
+    const petHer = () => {
+        const pet = petRef.current
+        if (!pet) return
+        const t = performance.now()
+        pet.levelAtPet = Math.max(0, 1 - pet.lonely / SULK_AFTER) * 5
+        pet.refillAt = t
+        pet.lonely = 0
+        sound(petSound)
+        if (soundEnabled && !mutedRef.current) insides()?.pulse("spkOut", insides()?.thump) // her sound runs back down to the speaker
+        if (pet.hopStart == null) {
+            pet.hopStart = t
+            pet.hearts.push({ born: t, x: OX + 3.5 * ART })
+        }
+        setMsg(true)
+        clearTimeout(msgTimer.current)
+        msgTimer.current = setTimeout(() => setMsg(false), 2600)
+    }
+    // LOOK: she looks that way. With a photo set, the photo comes in from that side; while it's up, either
+    // arrow brings her back from the side pressed. A press mid-slide is ignored.
     const onLook = (dir: number) => () =>
         insides()?.pulse(dir < 0 ? "left" : "right", () => {
             const pet = petRef.current
-            if (!pet || pet.asleep) return
+            if (!pet || pet.asleep || busyRef.current) return
             sound(lookSound)
-            pet.snubSide = dir // while snubbing, LOOK changes which way she turns away
-            pet.micro = "look"
-            pet.microDir = dir
-            pet.microUntil = performance.now() + 850
+            if (!hasPhoto) return lookAt(pet, dir, performance.now() + 850)
+            if (sideRef.current === 0) showPhoto(dir)
+            else bringHerBack(dir, true)
         })
     // power key: OFF puts her to sleep and the terminal goes dark; ON wakes
     // her, replays the log boot and starts her mood clock fresh
@@ -1347,6 +1593,7 @@ function Peri(props: Props & { door?: { onDone: () => void; page: () => HTMLElem
             sound(powerSound)
             if (soundEnabled && !mutedRef.current) insides()?.thump()
             const t = performance.now()
+            dropPhoto()
             if (!pet.asleep) {
                 pet.asleep = true
                 pet.sleptAt = t
@@ -1552,15 +1799,46 @@ function Peri(props: Props & { door?: { onDone: () => void; page: () => HTMLElem
                 <span className="pd-v">{row.v}</span>
             </div>
         )),
-        <div
-            className="pd-prompt pd-trail"
-            style={{ animationDelay: `${(LOG.length + 1) * step}ms` }}
-            key="trail"
-        >
-            <span className="pd-path">~/about</span>
-            <span style={{ color: arrowColor }}>&gt;</span>
-            <span className="pd-caret" />
-        </div>,
+        // while her photo is up, the terminal shows what she ran to make it
+        ...(shot === "off"
+            ? [
+                  <div
+                      className="pd-prompt pd-trail"
+                      style={{ animationDelay: `${(LOG.length + 1) * step}ms` }}
+                      key="trail"
+                  >
+                      <span className="pd-path">~/about</span>
+                      <span style={{ color: arrowColor }}>&gt;</span>
+                      <span className="pd-caret" />
+                  </div>,
+              ]
+            : [
+                  <div className="pd-prompt pd-render" key="render">
+                      <span className="pd-path">~/about</span>
+                      <span style={{ color: arrowColor }}>&gt;</span>
+                      <span className="pd-cmd">{`render ${PHOTO_FILE}`.slice(0, typed)}</span>
+                  </div>,
+                  ...(shot === "typing"
+                      ? []
+                      : [
+                            <div className="pd-row" key="dither">
+                                <span className="pd-k" />
+                                <span className="pd-v">
+                                    {shot === "on" ? "dithering… " : <span className="pd-busy">dithering</span>}
+                                    {shot === "on" ? <span className="pd-done">done</span> : null}
+                                </span>
+                            </div>,
+                        ]),
+                  ...(shot === "on"
+                      ? [
+                            <div className="pd-prompt pd-after" key="after">
+                                <span className="pd-path">~/about</span>
+                                <span style={{ color: arrowColor }}>&gt;</span>
+                                <span className="pd-caret" />
+                            </div>,
+                        ]
+                      : []),
+              ]),
     ]
 
     const device = (
@@ -1632,6 +1910,15 @@ function Peri(props: Props & { door?: { onDone: () => void; page: () => HTMLElem
                                         background: C.bg,
                                     }}
                                 />
+                                {hasPhoto ? (
+                                    <canvas
+                                        ref={photoCvRef}
+                                        className="pd-photo"
+                                        role="img"
+                                        aria-label={PHOTO_ALT}
+                                        aria-hidden={shot !== "on"}
+                                    />
+                                ) : null}
                                 {/* message overlay */}
                                 <div
                                     style={{
@@ -1990,6 +2277,7 @@ PixelPet.defaultProps = {
     volume: 0.6,
     frontDoor: false,
     doorShows: "once",
+    photoTones: "peri",
 }
 
 addPropertyControls(PixelPet, {
@@ -2007,6 +2295,20 @@ addPropertyControls(PixelPet, {
         options: ["once", "always"],
         optionTitles: ["Once per visit", "Every load"],
         hidden: (p) => !p.frontDoor,
+    },
+    photo: {
+        type: ControlType.Image,
+        title: "Photo",
+        description: "LOOK renders it on her screen, dithered in her tones",
+        hidden: (p) => p.frontDoor,
+    },
+    photoTones: {
+        type: ControlType.Enum,
+        title: "Photo tones",
+        defaultValue: "peri",
+        options: Object.keys(PHOTO_TONES),
+        optionTitles: ["Peri", "Five"],
+        hidden: (p) => p.frontDoor || !p.photo,
     },
     message: {
         type: ControlType.String,
